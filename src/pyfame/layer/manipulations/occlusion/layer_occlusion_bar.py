@@ -10,8 +10,9 @@ import numpy as np
 
 class BarOcclusionParameters(BaseModel):
     bar_colour:Tuple[int,int,int]
-    bar_padding:NonNegativeInt
-    landmark_path:List[Tuple[int,...]]
+    vertical_bar_span:NonNegativeInt
+    landmark_paths:List[Tuple[int,...]]
+    y_offset:int
 
     @field_validator("bar_colour")
     @classmethod
@@ -23,7 +24,7 @@ class BarOcclusionParameters(BaseModel):
         
         return value
     
-    @field_validator("landmark_path", mode="before")
+    @field_validator("landmark_paths", mode="before")
     @classmethod
     def check_compatible_path(cls, value, info:ValidationInfo):
         valid_paths = [LANDMARK_LEFT_EYE_REGION, LANDMARK_RIGHT_EYE_REGION, LANDMARK_BOTH_EYE_REGIONS, LANDMARK_NOSE, LANDMARK_LIPS, LANDMARK_MOUTH_REGION]
@@ -45,8 +46,9 @@ class LayerOcclusionBar(Layer):
 
         # Define class parameters
         self.bar_color = self.occlude_params.bar_colour
-        self.bar_padding = self.occlude_params.bar_padding
-        self.landmark_path = self.occlude_params.landmark_path
+        self.vertical_bar_span = self.occlude_params.vertical_bar_span
+        self.landmark_paths = self.occlude_params.landmark_paths
+        self.y_offset = self.occlude_params.y_offset
         self.min_x_lm_id = -1
         self.max_x_lm_id = -1
         self.min_y_lm_id = -1
@@ -105,53 +107,56 @@ class LayerOcclusionBar(Layer):
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
 
         # Bar occlusion does not support weight, so weight will always be 0.0 or 1.0
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
 
         if weight == 0.0:
             return frame
-        else:
-            h,w = frame.shape[:2]
-            # Replace placeholder concave path with its convex sub-paths
-            roi_coordinates = get_pixel_coordinates_from_landmark(landmarker_coordinates, self.landmark_path)
-            roi_arr = np.array(roi_coordinates, dtype=int)
+        
+        h,w = frame.shape[:2]
+        # Replace placeholder concave path with its convex sub-paths
+        roi_coordinates = get_pixel_coordinates_from_landmark(landmarker_coordinates, self.landmark_paths)
+        roi_arr = np.array(roi_coordinates, dtype=int)
 
-            if self.min_x_lm_id == -1 or self.max_x_lm_id == -1 or self.min_y_lm_id == -1 or self.max_y_lm_id == -1:
-                self.set_min_max_landmarks(landmarker_coordinates, roi_arr)
+        if self.min_x_lm_id == -1 or self.max_x_lm_id == -1 or self.min_y_lm_id == -1 or self.max_y_lm_id == -1:
+            self.set_min_max_landmarks(landmarker_coordinates, roi_arr)
 
-            # Calculate the slope of the connecting line & angle to the horizontal
-            # landmarks 162, 389 form a paralell line to the x-axis when the face is vertical
-            p1 = landmarker_coordinates[162]
-            p2 = landmarker_coordinates[389]
-            slope = compute_slope(p1, p2)
-            rot_angle = compute_rotation_angle(slope_1=slope)
-            
-            # Compute the center bisecting line of the landmark
-            min_x_lm = landmarker_coordinates[self.min_x_lm_id]
-            max_x_lm = landmarker_coordinates[self.max_x_lm_id]
-            min_y_lm = landmarker_coordinates[self.min_y_lm_id]
-            max_y_lm = landmarker_coordinates[self.max_y_lm_id]
-            cx = int(round((min_x_lm[0] + max_x_lm[0])/2.0))
-            cy = int(round((min_y_lm[1] + max_y_lm[1])/2.0))
-            
-            # Generate the rectangle
-            masked_frame = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-            x1 = max(0, min_x_lm[0] - self.bar_padding)
-            x2 = min(w-1, max_x_lm[0] + self.bar_padding)
-            y1 = max(0, cy - self.bar_padding)
-            y2 = min(h-1, cy + self.bar_padding)
-            cv.rectangle(masked_frame, (x1, y1), (x2, y2), (255,255,255), -1)
-            
-            # Generate rotation matrix and rotate the rectangle
-            rot_mat = cv.getRotationMatrix2D((cx,cy), (rot_angle), 1.0)
-            rot_mask = cv.warpAffine(masked_frame, rot_mat, (w,h), flags=cv.INTER_NEAREST)
-            rot_mask = rot_mask.astype(bool)
+        # Calculate the slope of the connecting line & angle to the horizontal
+        # landmarks 162, 389 form a paralell line to the x-axis when the face is vertical
+        p1 = landmarker_coordinates[162]
+        p2 = landmarker_coordinates[389]
+        slope = compute_slope(p1, p2)
+        rot_angle = compute_rotation_angle(slope_1=slope)
+        
+        # Compute the center bisecting line of the landmark
+        min_x_lm = landmarker_coordinates[self.min_x_lm_id]
+        max_x_lm = landmarker_coordinates[self.max_x_lm_id]
+        min_y_lm = landmarker_coordinates[self.min_y_lm_id]
+        max_y_lm = landmarker_coordinates[self.max_y_lm_id]
+        cx = int(round((min_x_lm[0] + max_x_lm[0])/2.0))
+        cy = int(round((min_y_lm[1] + max_y_lm[1])/2.0))
+        
+        # Generate the rectangle
+        masked_frame = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+        x1 = max(0, min_x_lm[0] - 30)
+        x2 = min(w-1, max_x_lm[0] + 30)
+        y1 = max(0, cy - (self.vertical_bar_span//2))
+        y2 = min(h-1, cy + (self.vertical_bar_span//2))
+        cv.rectangle(masked_frame, (x1, y1 + self.y_offset), (x2, y2 + self.y_offset), (255,255,255), -1)
+        
+        # Generate rotation matrix and rotate the rectangle
+        rot_mat = cv.getRotationMatrix2D((cx,cy), (rot_angle), 1.0)
+        rot_mask = cv.warpAffine(masked_frame, rot_mat, (w,h), flags=cv.INTER_NEAREST)
+        rot_mask = rot_mask.astype(bool)
 
-            output_frame = frame.copy().astype(np.uint8)
-            output_frame[rot_mask] = self.bar_color
-            
-            return output_frame
+        output_frame = frame.copy().astype(np.uint8)
+        output_frame[rot_mask] = self.bar_color
+        
+        return output_frame
 
-def layer_occlusion_bar(timing_configuration:TimingConfiguration | None = None, landmark_path:list[tuple[int,...]] = LANDMARK_BOTH_EYE_REGIONS, bar_colour:tuple[int,int,int] = (0,0,0), bar_padding:int = 50) -> LayerOcclusionBar:
+def layer_occlusion_bar(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[tuple[int,...]] = LANDMARK_BOTH_EYE_REGIONS, bar_colour:tuple[int,int,int] = (0,0,0), vertical_bar_span:int = 100, y_offset:int = 15) -> LayerOcclusionBar:
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 
@@ -159,8 +164,9 @@ def layer_occlusion_bar(timing_configuration:TimingConfiguration | None = None, 
     try:
         params = BarOcclusionParameters(
             bar_colour=bar_colour, 
-            bar_padding=bar_padding,
-            landmark_path=landmark_path
+            vertical_bar_span=vertical_bar_span,
+            landmark_paths=landmark_paths,
+            y_offset = y_offset
         )
     except ValidationError as e:
         raise ValueError(f"Invalid parameters for {LayerOcclusionBar.__name__}: {e}")

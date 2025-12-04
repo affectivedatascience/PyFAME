@@ -1,5 +1,5 @@
 from pydantic import BaseModel, NonNegativeFloat, field_validator, ValidationInfo, ValidationError
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Any
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.landmark.facial_landmarks import *
@@ -122,9 +122,12 @@ class LayerColourRecolour(Layer):
                     else:
                         self.adjusted_landmark_paths = []
     
-    def apply_layer(self, landmarker_coordinates, frame, dt, blendshapes):
+    def apply_layer(self, landmarker_coordinates:list[tuple[int, int]], frame:cv.typing.MatLike, dt:float, blendshapes:Any):
 
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
         
         # Occurs when the current dt is less than the onset_time, or greater than the offset_time
         if weight == 0.0:

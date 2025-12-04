@@ -77,10 +77,13 @@ class LayerOcclusionNoise(Layer):
         self._layer_parameters["time_offset"] = self.offset_t
         return dict(self._layer_parameters)
 
-    def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float = None):
+    def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
         
         # This layer does not support weight; weight will always be 0.0 or 1.0
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
 
         if weight == 0.0:
             return frame

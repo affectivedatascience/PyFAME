@@ -49,41 +49,45 @@ class LayerMask(Layer):
         self._layer_parameters["time_offset"] = self.offset_t
         return dict(self._layer_parameters)
     
-    def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float = None):
+    def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
         
         # Masking does not support weight, so weight will always be 0.0 or 1.0
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
 
         # Occurs when the dt is less than the onset_time, or greater than the offset_time
         if weight == 0.0:
             return frame
-        else:
-            # Mask out the region of interest
-            mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
+        
+        # Mask out the region of interest
+        mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
 
-            # Otsu thresholding to seperate foreground and background
-            grey_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-            grey_blurred = cv.GaussianBlur(grey_frame, (7,7), 0)
-            thresh_val, thresholded = cv.threshold(grey_blurred, 0, 255, cv.THRESH_BINARY_INV | cv.THRESH_OTSU)
+        # Otsu thresholding to seperate foreground and background
+        grey_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        grey_blurred = cv.GaussianBlur(grey_frame, (7,7), 0)
+        thresh_val, thresholded = cv.threshold(grey_blurred, 0, 255, cv.THRESH_BINARY_INV | cv.THRESH_OTSU)
 
-            # Adding a temporary image border to allow for correct floodfill behaviour
-            bordered_thresholded = cv.copyMakeBorder(thresholded, 10, 10, 10, 10, cv.BORDER_CONSTANT)
-            floodfilled = bordered_thresholded.copy()
-            cv.floodFill(floodfilled, None, (0,0), 255)
+        # Adding a temporary image border to allow for correct floodfill behaviour
+        bordered_thresholded = cv.copyMakeBorder(thresholded, 10, 10, 10, 10, cv.BORDER_CONSTANT)
+        floodfilled = bordered_thresholded.copy()
+        cv.floodFill(floodfilled, None, (0,0), 255)
 
-            # Removing temporary border and creating foreground mask
-            floodfilled = floodfilled[10:-10, 10:-10]
-            floodfilled = cv.bitwise_not(floodfilled)
-            foreground = cv.bitwise_or(thresholded, floodfilled)
+        # Removing temporary border and creating foreground mask
+        floodfilled = floodfilled[10:-10, 10:-10]
+        floodfilled = cv.bitwise_not(floodfilled)
+        foreground = cv.bitwise_or(thresholded, floodfilled)
 
-            # Remove unwanted background inclusions in the masked area
-            masked_frame = cv.bitwise_and(mask, foreground)
-            masked_frame = np.reshape(masked_frame, (masked_frame.shape[0], masked_frame.shape[1], 1))
-            masked_frame = np.where(masked_frame == 255, frame, self.background_colour)
-            masked_frame = masked_frame.astype(np.uint8)
-            return masked_frame
+        # Remove unwanted background inclusions in the masked area
+        masked_frame = cv.bitwise_and(mask, foreground)
+        masked_frame = np.reshape(masked_frame, (masked_frame.shape[0], masked_frame.shape[1], 1))
+        masked_frame = np.where(masked_frame == 255, frame, self.background_colour)
+        masked_frame = masked_frame.astype(np.uint8)
+        return masked_frame
 
 def layer_mask(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, background_colour:tuple[int,int,int] = (0,0,0)) -> LayerMask:
+    # TODO: Add invert_mask option where before output you perform masked_frame = cv.bitwise_not(mask)
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 

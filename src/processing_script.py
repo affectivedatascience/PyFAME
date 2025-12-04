@@ -1,17 +1,20 @@
 ### TODO
 
-# Look for some new tears (datasets or individual samples), and additional overlay assets (beard, moustache, mask, piercing)
-# Update pytest test suite
-
 # Colour, Mask, Occlusion, spatial, overlay, layers now work as expected (+ Analysis methods)
 # Don't forget to go through stylise and temporal layers, and conversion methods
 
-# consider pre-processing pass finding frames where blinks occur, similar to accurate_colour_scale with Optical flow methods
 # Consider looking into passing both the unaltered and current (altered) frame to each layer in LayerPipeline
 # If I havent already, weigh pupil size by timestamp in pupil overlay.
+# Also adding a greyscale conversion colouring layer 
+
+# Look for more overlay objects, consider creating mappings for tracking midpoints of overlays
+# Talk to stephen about timing function wrapper, would allow for asymetric timing curves
 
 import pyfame as pf
 
 file_paths = pf.make_paths()
-of_result = pf.analyse_facial_colour_means(file_paths.iloc[[1]], colour_space="hsv")
-pf.analysis_to_disk(of_result, "Facial Colour Means")
+timing_config = pf.TimingConfiguration(onset_time=250, rise_time=750, rise_curve=pf.timing_gaussian, fall_time=750, fall_curve=pf.timing_sigmoid)
+
+col = pf.layer_color_recolor(timing_config, pf.LANDMARK_FACE_OVAL, magnitude=20.0)
+
+pf.apply_layers(file_paths.iloc[[0]], col)

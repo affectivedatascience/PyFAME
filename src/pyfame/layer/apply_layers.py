@@ -12,21 +12,26 @@ import pandas as pd
 from datetime import datetime
 from tqdm import tqdm
 
-def resolve_missing_timing(layer:Layer, video_duration:int) -> tuple[int,int]:
-    onset = layer.onset_t if layer.onset_t is not None else 0
-    offset = layer.offset_t if layer.offset_t is not None else video_duration
+def resolve_timing(layer:Layer, video_duration:float):
+    onset = 0.0 if layer.onset_t is None else layer.onset_t
+    offset = video_duration if layer.offset_t is None else layer.offset_t
+    if offset < 0.0:
+        offset = video_duration + offset
+
+    if not (0.0 <= onset < offset):
+        raise ValueError(f"apply_layers: time_onset must be greater than zero, and less than time_offset for layer {type(layer).__name__}.")
+    elif not (onset < offset <= video_duration):
+        raise ValueError(f"apply_layers: time_offset must be greater than time_onset, and less than the videos duration for layer {type(layer).__name__}.")
 
     # Update timing config object
     layer.config = layer.config.model_copy(update={
-        "time_onset": onset,
-        "time_offset": offset
+        "onset_time": onset,
+        "offset_time": offset
     })
 
     # keep layer.self params in sync
     layer.onset_t = onset
     layer.offset_t = offset
-
-    return onset, offset
 
 def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_detection_confidence:float = 0.4, 
                  min_face_presence_confidence:float = 0.7, min_tracking_confidence:float = 0.7):
@@ -87,6 +92,9 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
         layers = [layers]
 
     # Extracting the i/o paths from the file_paths dataframe
+    if len(file_paths["Absolute Path"]) == 0:
+        raise FileReadError(message="File_paths dataframe is empty, please inspect your working folder to ensure you have populated the raw/ directory.")
+    
     absolute_paths = file_paths["Absolute Path"]
     relative_paths = file_paths["Relative Path"]
 
@@ -107,11 +115,11 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
     root_directory_path = os.path.join(norm_cwd, root_directory)
 
     if not os.path.isdir(root_directory_path):
-        raise FileReadError(message=f"Unable to locate the input {root_directory} directory. Please call make_output_paths() to set up the correct directory structure.")
+        raise FileReadError(message=f"Unable to locate the input {root_directory} directory. Please call make_paths() to set up the correct directory structure.")
     if not os.path.isdir(os.path.join(root_directory_path, "raw")):
-        raise FileReadError(message=f"Unable to locate the 'raw' subdirectory under root directory '{root_directory}'. Please call make_output_paths() to set up the correct directory structure.")
+        raise FileReadError(message=f"Unable to locate the 'raw' subdirectory under root directory '{root_directory}'. Please call make_paths() to set up the correct directory structure.")
     if not os.path.isdir(os.path.join(root_directory_path, "processed")):
-        raise FileReadError(message=f"Unable to locate the 'processed' subdirectory under root directory '{root_directory}'. Please call make_output_paths() to set up the correct directory structure.")
+        raise FileReadError(message=f"Unable to locate the 'processed' subdirectory under root directory '{root_directory}'. Please call make_paths() to set up the correct directory structure.")
 
     # Pre-made subdirectory structure in the project root
     input_directory = os.path.join(root_directory_path, "raw")
@@ -125,6 +133,7 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
     pipeline.add_layers(layers)
 
     static_image_mode = False
+    log_output = False
 
     # Iterate over file list
     for i,file in enumerate(
@@ -162,7 +171,7 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
         if str.lower(extension) not in {".mp4", ".mov", ".jpg", ".jpeg", ".png", ".bmp"}:
             print(f"Skipping unparseable file {os.path.basename(file)}.")
             continue
-        # Reset the face mesh if switching between movies and images
+        
         elif str.lower(extension) in {".jpg", ".jpeg", ".png", ".bmp"}:
             static_image_mode = True
         
@@ -178,10 +187,11 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
             if fps == 0:
                 raise FileReadError(message="Input video fps is zero. File may be corrupt or incorrectly encoded.")
             else:
-                cap_duration = float(frame_count)/float(fps)
+                # convert to msec
+                cap_duration = (float(frame_count)/float(fps))*1000
 
             for layer in pipeline.layers:
-                resolve_missing_timing(layer, cap_duration)
+                resolve_timing(layer, cap_duration)
         else:
             frame_count = 1
         
@@ -211,15 +221,15 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
                 frame = get_imread(file)
                 if frame is None:
                     break
+                landmark_coordinates, blendshapes = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker)
             else:
                 success, frame = capture.read()
                 if not success:
                     break
-
+                dt = capture.get(cv.CAP_PROP_POS_MSEC)
+                landmark_coordinates, blendshapes = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, dt)
+                
             pb.update(1)
-            frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            dt = capture.get(cv.CAP_PROP_POS_MSEC)
-            landmark_coordinates, blendshapes = get_pixel_coordinates(frame_rgb, face_landmarker, dt)
 
             if blendshapes is None:
                 raise FaceNotFoundError(message="FaceLandmarker failed to identify and return blendshapes.")
@@ -237,10 +247,16 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
                     raise FileWriteError()
                 
                 break
-
-        pb.close()
-        write_experiment_log(layers, file, root_directory_path)
         
+        if pb.__getattribute__("n") < frame_count:
+            pb.update(frame_count - pb.__getattribute__("n"))
+            
+        pb.close()
+
+        if not log_output:
+            write_experiment_log(layers, root_directory_path)
+            log_output = True
+    
         if not static_image_mode:
             capture.release()
             result.release()

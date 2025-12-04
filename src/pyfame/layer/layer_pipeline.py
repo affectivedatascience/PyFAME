@@ -46,9 +46,23 @@ class LayerPipeline:
         for layer in self.layers:
             # Optical flow layers require the file path if a precomputed colour scale is specified
             if isinstance(layer, (LayerStyliseOpticalFlowDense, LayerStyliseOpticalFlowSparse)):
-                frame = layer.apply_layer(landmarker_coordinates, frame, dt, file_path)
+                frame = layer.apply_layer(
+                    landmarker_coordinates = landmarker_coordinates, 
+                    frame = frame, 
+                    dt=dt, 
+                    file_path = file_path
+                )
             elif isinstance(layer, (LayerColourRecolour, LayerOverlay)):
-                frame = layer.apply_layer(landmarker_coordinates, frame, dt, blendshapes)
+                frame = layer.apply_layer(
+                    landmarker_coordinates = landmarker_coordinates,
+                    frame = frame, 
+                    dt = dt, 
+                    blendshapes = blendshapes
+                )
             else:
-                frame = layer.apply_layer(landmarker_coordinates, frame, dt)
+                frame = layer.apply_layer(
+                    landmarker_coordinates = landmarker_coordinates, 
+                    frame = frame, 
+                    dt = dt,
+                )
         return frame

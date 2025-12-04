@@ -7,7 +7,7 @@ from jsonschema import ValidationError
 from pyfame.layer.layer import Layer
 from pyfame.utilities.general_utilities import get_landmark_names
 
-def write_experiment_log(layers:list[Layer], input_file:str, working_directory_path:str) -> None:
+def write_experiment_log(layers:list[Layer], working_directory_path:str) -> None:
     if os.getenv("PYTEST_RUNNING") == "1":
         return
     else:
@@ -23,18 +23,15 @@ def write_experiment_log(layers:list[Layer], input_file:str, working_directory_p
             layer_type = type(layer).__name__
             parameters = layer.get_layer_parameters()
 
-            if parameters.get("landmark_paths") is not None:
-                parameters.update({"landmark_paths":get_landmark_names(parameters.get("landmark_paths"))})
-            
-            if parameters.get("timing_function") is not None:
-                parameters.update({"timing_function":parameters.get("timing_function").__name__})
+            parameters.update({"landmark_paths":get_landmark_names(parameters.get("landmark_paths"))})
+            parameters.update({"rise_curve":type(parameters.get("rise_curve")).__name__})
+            parameters.update({"fall_curve":type(parameters.get("fall_curve")).__name__})
 
             layer_dict[layer_type] = parameters
 
         log_data = {
             "schema_version":"1.0",
             "timestamp":timestamp,
-            "file":input_file,
             "layers": layer_dict
         }
 

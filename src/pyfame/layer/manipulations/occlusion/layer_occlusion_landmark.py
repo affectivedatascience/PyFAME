@@ -62,39 +62,42 @@ class LayerOcclusionLandmark(Layer):
     
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float = None):
         
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
         
         if weight == 0.0:
             return frame
-        else:
-            # Mask out the region of interest
-            mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
-            mask = np.reshape(mask, (mask.shape[0], mask.shape[1], 1))
+        
+        # Mask out the region of interest
+        mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
+        mask = np.reshape(mask, (mask.shape[0], mask.shape[1], 1))
 
-            match self.fill_method:
-                case 8 | "black":
-                    bool_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
-                    occluded = np.where(mask == 255, (0,0,0), frame)
-                    return occluded
-                
-                case 9 | "mean":
-                    fo_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_FACE_OVAL)
+        match self.fill_method:
+            case 8 | "black":
+                bool_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
+                occluded = np.where(mask == 255, (0,0,0), frame)
+                return occluded
+            
+            case 9 | "mean":
+                fo_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_FACE_OVAL)
 
-                    # Creating boolean masks for the facial landmarks 
-                    bool_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
-                    bool_mask = cv.fillConvexPoly(bool_mask, np.array(fo_coords), 1)
-                    bool_mask = bool_mask.astype(bool)
+                # Creating boolean masks for the facial landmarks 
+                bool_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
+                bool_mask = cv.fillConvexPoly(bool_mask, np.array(fo_coords), 1)
+                bool_mask = bool_mask.astype(bool)
 
-                    # Extracting the mean pixel value of the face
-                    bin_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-                    bin_mask[bool_mask] = 255
-                    mean = cv.mean(frame, bin_mask)
+                # Extracting the mean pixel value of the face
+                bin_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                bin_mask[bool_mask] = 255
+                mean = cv.mean(frame, bin_mask)
 
-                    # Fill occlusion regions with facial mean
-                    mean_img = np.zeros_like(frame, dtype=np.uint8)
-                    mean_img[:] = mean[:3]
-                    occluded = np.where(mask == 255, mean_img, frame)
-                    return occluded
+                # Fill occlusion regions with facial mean
+                mean_img = np.zeros_like(frame, dtype=np.uint8)
+                mean_img[:] = mean[:3]
+                occluded = np.where(mask == 255, mean_img, frame)
+                return occluded
 
 def layer_occlusion_landmark(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]]=LANDMARK_FACE_OVAL, fill_method:int|str = OCCLUSION_FILL_BLACK) -> LayerOcclusionLandmark:
     

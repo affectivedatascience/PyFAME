@@ -1,18 +1,19 @@
-from pydantic import BaseModel, NonNegativeFloat, ConfigDict
-from typing import Callable, Optional
+from pydantic import BaseModel, NonNegativeFloat
+from typing import Callable, Optional, Any
 from abc import ABC, abstractmethod
 from cv2.typing import MatLike
 from pyfame.layer.timing_curves import timing_linear
 import copy
 
 class TimingConfiguration(BaseModel):
-    time_onset:Optional[NonNegativeFloat] = None
-    time_offset:Optional[NonNegativeFloat] = None
-    timing_function:Callable[...,float] = timing_linear
-    rise_duration:NonNegativeFloat = 0.5
-    fall_duration:NonNegativeFloat = 0.5
-    # kwargs-like dict of extra arguments stored in model_extra dictionary
-    model_config = ConfigDict(extra="allow")
+    onset_time:Optional[NonNegativeFloat] = None
+    offset_time:Optional[int] = None
+    rise_time:NonNegativeFloat = 500.0
+    fall_time:NonNegativeFloat = 500.0
+    rise_curve:Callable[...,float] = timing_linear
+    fall_curve:Callable[...,float] = timing_linear
+    rise_curve_kwargs:Optional[dict] = None
+    fall_curve_kwargs:Optional[dict] = None
 
 class Layer(ABC): 
     """ An abstract base class to be extended by pyfame's manipulation layer classes. """
@@ -22,12 +23,14 @@ class Layer(ABC):
         # if config is none, populate with defaults
         self.config = configuration or TimingConfiguration()
 
-        self.onset_t = self.config.time_onset
-        self.offset_t = self.config.time_offset
-        self.timing = self.config.timing_function
-        self.rise = self.config.rise_duration
-        self.fall = self.config.fall_duration
-        self.time_kwargs = self.config.model_extra
+        self.onset_t = self.config.onset_time
+        self.offset_t = self.config.offset_time
+        self.rise = self.config.rise_time
+        self.fall = self.config.fall_time
+        self.rise_fn = self.config.rise_curve
+        self.fall_fn = self.config.fall_curve
+        self.rise_kwargs = self.config.rise_curve_kwargs
+        self.fall_kwargs = self.config.fall_curve_kwargs
     
     def _snapshot_state(self):
         self._initial_state = copy.deepcopy(self.__dict__)
@@ -38,28 +41,28 @@ class Layer(ABC):
         self.__dict__ = init_state
         
     def compute_weight(self, dt:float, supports_weight:bool) -> float:
-        if dt is None:
-            return 0.0
-        elif supports_weight:
-            return self.timing(dt, self.onset_t, self.offset_t, self.rise, self.fall, **self.time_kwargs)
+        # Handle None case for kwargs list
+        if supports_weight:
+            if dt <= (self.onset_t + self.rise):
+                # off -> rise transition
+                if self.rise_kwargs is not None:
+                    return self.rise_fn(dt, self.onset_t, (self.onset_t + self.rise), True, **self.rise_kwargs)
+                else:
+                    return self.rise_fn(dt, self.onset_t, (self.onset_t + self.rise), True)
+            elif dt >= (self.offset_t - self.fall):
+                # fall transition -> off
+                if self.fall_kwargs is not None:
+                    return self.fall_fn(dt, (self.offset_t - self.fall), self.offset_t, False, **self.fall_kwargs)
+                else:
+                    return self.fall_fn(dt, (self.offset_t - self.fall), self.offset_t, False)
+            else:
+                # sustain at max
+                return 1.0
         else:
-            return 1.0
-    
-    # def get_frame_as_mp_image(frame:MatLike):
-    #     # Save the orignal dimensions for determining padding
-    #     original_h, original_w = frame.shape[:2]
-
-    #     # Pad to square dimensions before face landmarking
-    #     if original_h > original_w:
-    #         pad = (original_h - original_w) // 2
-    #         padded_frame = cv.copyMakeBorder(frame, 0, 0, pad, pad, cv.BORDER_CONSTANT, value=(0,0,0))
-    #     elif original_w > original_h:
-    #         pad = (original_w - original_h) // 2
-    #         padded_frame = cv.copyMakeBorder(frame, pad, pad, 0, 0, cv.BORDER_CONSTANT, value=(0,0,0))
-    #     else:
-    #         padded_frame = frame
-        
-    #     return mp.Image(image_format=mp.ImageFormat.SRGB, data=padded_frame)
+            if self.onset_t <= dt <= self.offset_t:
+                return 1.0
+            else:
+                return 0.0
 
     @abstractmethod
     def supports_weight(self) -> bool:

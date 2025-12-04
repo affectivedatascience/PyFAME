@@ -1,5 +1,4 @@
 from collections import deque
-from mediapipe.tasks.python.vision.face_landmarker import Blendshapes
 import numpy as np
 
 class EyeBlendshapeSmoother:

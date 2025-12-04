@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError, PositiveFloat, NonNegativeInt
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
@@ -7,6 +7,8 @@ from pyfame.utilities.constants import *
 import cv2 as cv
 import numpy as np
 from skimage.util import *
+
+# Reimplement passing of idx_to_track list for precise landmark inclusion
 
 class PointLightParameters(BaseModel):
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
@@ -17,6 +19,7 @@ class PointLightParameters(BaseModel):
     history_window_msec:NonNegativeInt = 500
     history_vector_colour:tuple[NonNegativeInt, NonNegativeInt, NonNegativeInt]
     maintain_background:bool
+    invert_colours:bool
 
     @field_validator("point_colour", "history_vector_colour")
     @classmethod
@@ -75,6 +78,7 @@ class LayerStylisePointLight(Layer):
         self.history_window_msec = self.pl_params.history_window_msec
         self.history_colour = self.pl_params.history_vector_colour
         self.landmark_paths = self.pl_params.landmark_paths
+        self.invert_colours = self.pl_params.invert_colours
 
         # Snapshot of initial state
         self._snapshot_state()
@@ -92,124 +96,143 @@ class LayerStylisePointLight(Layer):
 
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
         
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
 
         if weight == 0.0:
             return frame
+        
+        mask = np.zeros_like(frame, dtype=np.uint8)
+        frame_history_count = round(30 * (self.history_window_msec/1000))
+
+        if self.maintain_background:
+            output_img = frame.copy()
         else:
-            mask = np.zeros_like(frame, dtype=np.uint8)
-            frame_history_count = round(30 * (self.history_window_msec/1000))
+            output_img = np.zeros_like(frame, dtype=np.uint8)
 
-            if self.maintain_background:
-                output_img = frame.copy()
-            else:
-                output_img = np.zeros_like(frame, dtype=np.uint8)
+        included_idx = np.array([], dtype=np.uint8)
 
-            if self.idx_to_display.size == 0:
-                for lm_path in self.landmark_paths:
-                    lm_mask = mask_from_landmarks(frame, lm_path, landmarker_coordinates)
-                    lm_mask = lm_mask.astype(bool)
+        if isinstance(self.landmark_paths[0], list):
+            for lm_path in self.landmark_paths:
+                lm_mask = mask_from_landmarks(frame, lm_path, landmarker_coordinates)
+                lm_mask = lm_mask.astype(bool)
 
-                    # Use the generated bool mask to get valid indicies
-                    for lm in landmarker_coordinates:
-                        x = lm[0]
-                        y = lm[1]
-                        if lm_mask[y,x] == True:
-                            self.idx_to_display = np.append(self.idx_to_display, lm.get('id'))
-            
-            if self.point_density != 1.0:
-                # Pad and reshape idx array to slices of size 10
-                new_lm_idx = self.idx_to_display.copy()
-                pad_size = len(new_lm_idx)%10
-                append_arr = np.full(10-pad_size, -1)
-                new_lm_idx = np.append(new_lm_idx, append_arr)
-                new_lm_idx = new_lm_idx.reshape((-1, 10))
+                # Use the generated bool mask to get valid indicies
+                for id, lm in enumerate(landmarker_coordinates):
+                    x = lm[0]
+                    y = lm[1]
+                    if lm_mask[y,x] == True:
+                        included_idx = np.append(included_idx, id)
+        else:
+            lm_mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
+            lm_mask = lm_mask.astype(bool)
 
-                bin_idx_mask = np.zeros((new_lm_idx.shape[0], new_lm_idx.shape[1]))
+            # Use the generated bool mask to get valid indicies
+            for id, lm in enumerate(landmarker_coordinates):
+                x = lm[0]
+                y = lm[1]
+                if lm_mask[y,x] == True:
+                    included_idx = np.append(included_idx, id)
+        
+        if self.point_density != 1.0 and len(self.idx_to_display) == 0:
+            # Pad and reshape idx array to slices of size 10
+            new_lm_idx = included_idx.copy()
+            pad_size = len(new_lm_idx)%10
+            append_arr = np.full(10-pad_size, -1)
+            new_lm_idx = np.append(new_lm_idx, append_arr)
+            new_lm_idx = new_lm_idx.reshape((-1, 10))
 
-                for i,_slice in enumerate(new_lm_idx):
-                    num_ones = round(np.floor(10*self.point_density))
+            bin_idx_mask = np.zeros((new_lm_idx.shape[0], new_lm_idx.shape[1]), dtype=np.uint8)
 
-                    # Generate normal distribution around center of slice
-                    mean = 4.5
-                    std_dev = 1.67
-                    normal_idx = np.random.normal(loc=mean, scale=std_dev, size=num_ones)
-                    normal_idx = np.clip(normal_idx, 0, 9).astype(int)
+            for i,_slice in enumerate(new_lm_idx):
+                num_ones = round(np.floor(10*self.point_density))
 
-                    new_bin_arr = np.zeros(10)
-                    for idx in normal_idx:
-                        new_bin_arr[idx] = 1
-                    
-                    # Ensure the correct proportion of ones are present
-                    while new_bin_arr.sum() < num_ones:
-                        add_idx = np.random.choice(np.where(new_bin_arr == 0)[0])
-                        new_bin_arr[add_idx] = 1
-                    
-                    bin_idx_mask[i] = new_bin_arr
+                # Generate normal distribution around center of slice
+                mean = 4.5
+                std_dev = 1.67
+                normal_idx = np.random.normal(loc=mean, scale=std_dev, size=num_ones)
+                normal_idx = np.clip(normal_idx, 0, 9).astype(int)
+
+                new_bin_arr = np.zeros((10), dtype=np.uint8)
+                for idx in normal_idx:
+                    new_bin_arr[idx] = 1
                 
-                bin_idx_mask = bin_idx_mask.reshape((-1,))
-                new_lm_idx = new_lm_idx.reshape((-1,))
-                self.idx_to_display = np.where(bin_idx_mask == 1, new_lm_idx, -1)
-
-            cur_points = []
-            history_mask = np.zeros_like(frame, dtype=np.uint8)
-
-            # Store the x,y coords of every idx_to_display
-            for id in self.idx_to_display:
-                if id != -1:
-                    point = landmarker_coordinates[id]
-                    cur_points.append((point.get('x'), point.get('y')))
+                # Ensure the correct proportion of ones are present
+                while new_bin_arr.sum() < num_ones:
+                    add_idx = np.random.choice(np.where(new_bin_arr == 0)[0])
+                    new_bin_arr[add_idx] = 1
+                
+                bin_idx_mask[i] = new_bin_arr
             
-            if self.prev_points == None or self.display_history_vectors == False:
-                self.prev_points = cur_points.copy()
+            bin_idx_mask = bin_idx_mask.reshape((-1,))
+            new_lm_idx = new_lm_idx.reshape((-1,))
+            self.idx_to_display = np.where(bin_idx_mask == 1, new_lm_idx, -1)
+        elif len(self.idx_to_display) == 0:
+            self.idx_to_display = included_idx.copy()
 
-                # Draw a circle (point) over each of the current_points
-                for point in cur_points:
-                    x1, y1 = point
-                    if x1 > 0 and y1 > 0:
-                        output_img = cv.circle(output_img, (x1, y1), 3, self.point_colour, -1)
+        cur_points = []
+        history_mask = np.zeros_like(frame, dtype=np.uint8)
 
-            elif self.history_method == SHOW_HISTORY_ORIGIN:
-                # If show_history is true, display vector paths of all points;
-                # On top of the points themselves
-                for (old, new) in zip(self.prev_points, cur_points):
-                    x0, y0 = old
-                    x1, y1 = new
-                    mask = cv.line(mask, (int(x0), int(y0)), (int(x1), int(y1)), self.history_colour, 2)
-                    output_img = cv.circle(output_img, (int(x1), int(y1)), 3, self.point_colour, -1)
+        # Store the x,y coords of every idx_to_display
+        for id in self.idx_to_display:
+            if id != -1:
+                point = landmarker_coordinates[id]
+                cur_points.append(point)
+        
+        if self.prev_points == None or self.display_history_vectors == False:
+            self.prev_points = cur_points.copy()
 
-                self.prev_points = cur_points.copy()
-                output_img = cv.add(output_img, mask)
-                mask = np.zeros_like(frame, dtype=np.uint8)
+            # Draw a circle (point) over each of the current_points
+            for point in cur_points:
+                x1, y1 = point
+                if x1 > 0 and y1 > 0:
+                    cv.circle(output_img, (x1, y1), 3, self.point_colour, -1)
 
+        elif self.history_method == SHOW_HISTORY_ORIGIN:
+            # If show_history is true, display vector paths of all points;
+            # On top of the points themselves
+            for (old, new) in zip(self.prev_points, cur_points):
+                x0, y0 = old
+                x1, y1 = new
+                cv.line(mask, (int(x0), int(y0)), (int(x1), int(y1)), self.history_colour, 2)
+                cv.circle(output_img, (int(x1), int(y1)), 3, self.point_colour, -1)
+
+            #self.prev_points = cur_points.copy()
+            output_img = cv.add(output_img, mask)
+            mask = np.zeros_like(frame, dtype=np.uint8)
+
+        else:
+            # If show_history is true, display vector paths of all points
+            for (old, new) in zip(self.prev_points, cur_points):
+                x0, y0 = old
+                x1, y1 = new
+                cv.line(mask, (int(x0), int(y0)), (int(x1), int(y1)), self.history_colour, 2)
+                cv.circle(output_img, (int(x1), int(y1)), 3, self.point_colour, -1)
+
+            # Relative vector history only displays up to history_window_msec seconds of history
+            if len(self.frame_history) < frame_history_count:
+                self.frame_history.append(mask)
+                for img in self.frame_history:
+                    history_mask = cv.bitwise_or(history_mask, img)
             else:
-                # If show_history is true, display vector paths of all points
-                for (old, new) in zip(self.prev_points, cur_points):
-                    x0, y0 = old
-                    x1, y1 = new
-                    mask = cv.line(mask, (int(x0), int(y0)), (int(x1), int(y1)), self.history_colour, 2)
-                    output_img = cv.circle(output_img, (int(x1), int(y1)), 3, self.point_colour, -1)
+                self.frame_history.append(mask)
+                self.frame_history.pop(0)
+                for img in self.frame_history:
+                    history_mask = cv.bitwise_or(history_mask, img)
 
-                # Relative vector history only displays up to history_window_msec seconds of history
-                if len(self.frame_history) < frame_history_count:
-                    self.frame_history.append(mask)
-                    for img in self.frame_history:
-                        history_mask = cv.bitwise_or(history_mask, img)
-                else:
-                    self.frame_history.append(mask)
-                    self.frame_history.pop(0)
-                    for img in self.frame_history:
-                        history_mask = cv.bitwise_or(history_mask, img)
+            self.prev_points = cur_points.copy()
+            output_img = cv.add(output_img, history_mask)
+            mask = np.zeros_like(frame, dtype=np.uint8)
 
-                self.prev_points = cur_points.copy()
-                output_img = cv.add(output_img, history_mask)
-                mask = np.zeros_like(frame, dtype=np.uint8)
-
-            return output_img
+        if self.invert_colours:
+            return cv.bitwise_not(output_img)
+        return output_img
         
 def layer_stylise_point_light(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,int]]] | list[tuple[int,int]]=LANDMARK_FACE_OVAL, 
-                              point_density:float = 1.0, point_colour:tuple[int,int,int] = (255,255,255), display_history_vectors:bool = False, 
-                              history_method:int|str = SHOW_HISTORY_ORIGIN, history_vector_colour:tuple[int,int,int] = (0,0,255), maintain_background:bool = True):
+                              point_density:float = 1.0, point_colour:tuple[int,int,int] = (255,255,255), display_history_vectors:bool = False, history_window_msec:int = 500,
+                              history_method:int|str = SHOW_HISTORY_ORIGIN, history_vector_colour:tuple[int,int,int] = (0,0,255), maintain_background:bool = False, invert_colours:bool = False):
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 
@@ -221,8 +244,10 @@ def layer_stylise_point_light(timing_configuration:TimingConfiguration | None = 
             point_colour=point_colour, 
             display_history_vectors=display_history_vectors, 
             history_method=history_method, 
+            history_window_msec=history_window_msec,
             history_vector_colour=history_vector_colour, 
-            maintain_background=maintain_background
+            maintain_background=maintain_background, 
+            invert_colours=invert_colours
         )
     except ValidationError as e:
         raise ValueError(f"Invalid parameters for {LayerStylisePointLight.__name__}: {e}")

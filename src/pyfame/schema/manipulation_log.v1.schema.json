@@ -4,7 +4,7 @@
     "title": "PyFAME Manipulation Log",
     "description": "Schema for log files produced by PyFAME manipulations, so that the manipulations may be replicated.",
     "type":"object",
-    "required": ["schema_version", "timestamp", "file", "layers"],
+    "required": ["schema_version", "timestamp", "layers"],
     "properties": {
         "schema_version": {
             "type":"string",
@@ -15,10 +15,6 @@
             "format": "date-time",
             "description": "When the manipulation log was created (ISO 8601)."
         },
-        "file": {
-            "type":"string",
-            "description": "Path to the original file the manipulations were applied to."
-        },
         "layers": {
             "type":"object",
             "description": "Mapping of layer names to their configuration parameters.",
@@ -26,18 +22,24 @@
                 "type":"object",
                 "description": "Configuration parameters for a single manipulation layer.",
                 "required": [
-                    "time_onset", 
-                    "time_offset", 
-                    "timing_function", 
-                    "rise_duration", 
-                    "fall_duration"
+                    "onset_time", 
+                    "offset_time",
+                    "rise_time",
+                    "fall_time", 
+                    "rise_curve",
+                    "fall_curve", 
+                    "rise_curve_kwargs",
+                    "fall_curve_kwargs"
                 ],
                 "properties": {
-                    "time_onset": {"type":"number"},
-                    "time_offset": {"type":"number"},
-                    "timing_function": {"type":"string"},
-                    "rise_duration": {"type":"number"},
-                    "fall_duration": {"type":"number"}
+                    "onset_time": {"type":["number", "null"]},
+                    "offset_time": {"type":["number", "null"]},
+                    "rise_time": {"type":"number"},
+                    "fall_time": {"type":"number"},
+                    "rise_curve": {"type":"string"},
+                    "fall_curve": {"type":"string"},
+                    "rise_curve_kwargs": {"type":["object", "null"]},
+                    "fall_curve_kwargs": {"type":["object", "null"]}
                 },
                 "additionalProperties": true
             }

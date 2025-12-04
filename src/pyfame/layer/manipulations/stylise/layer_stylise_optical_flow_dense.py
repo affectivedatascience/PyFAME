@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo, PositiveInt, NonNegativeInt, PositiveFloat, NonNegativeFloat
 from pyfame.layer.layer import Layer, TimingConfiguration
+from pyfame.utilities.exceptions import IncompatibleFileError
 import cv2 as cv
 import numpy as np
 import matplotlib.cm as cm
@@ -113,7 +114,10 @@ class LayerStyliseOpticalFlowDense(Layer):
                 raise ValueError("File_path must be provided to apply_layer() when precise_colour_scale = True.")
             self.precompute_colour_scale(file_path)
 
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            raise IncompatibleFileError("LayerStyliseOpticalFlowDense can only operate on video files.")
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
 
         if weight == 0.0:
             return frame
@@ -184,7 +188,7 @@ class LayerStyliseOpticalFlowDense(Layer):
 
 def layer_stylise_optical_flow_dense(timing_configuration:TimingConfiguration | None = None, pixel_neighborhood_size:int = 5, search_window_size:int = 15, 
                                      max_pyramid_level:int = 2, pyramid_scale:float = 0.5, max_iterations:int = 10, gaussian_deviation:float = 1.2, 
-                                     legend:bool = True, legend_position:str = "top-left", precise_colour_scale:bool = True) -> LayerStyliseOpticalFlowDense:
+                                     legend:bool = True, legend_position:str = "top-left", precise_colour_scale:bool = False) -> LayerStyliseOpticalFlowDense:
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 

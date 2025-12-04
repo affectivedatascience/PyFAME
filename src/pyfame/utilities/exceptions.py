@@ -60,3 +60,9 @@ class ImageShapeError(PyFameError):
     def __init__(self, message:str="Input image shapes do not match. Please see pyfame.standardise_image_dimensions()."):
         self.message = message
         super().__init__(self.message)
+
+class IncompatibleFileError(PyFameError):
+    """ Raised when static images are passed to video only manipulation layers."""
+    def __init__(self, message:str="Incompatible file type for the selected manipulation layer."):
+        self.message = message
+        super().__init__(self.message)

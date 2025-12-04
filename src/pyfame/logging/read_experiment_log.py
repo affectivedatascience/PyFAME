@@ -28,13 +28,13 @@ def read_experiment_log(log_file_path:str) -> list[Layer]:
         "LayerColourSaturation":layer_colour_saturation,
         "LayerMask":layer_mask,
         "LayerOcclusionBar":layer_occlusion_bar,
-        "LayerOcclusionPath":layer_occlusion_path,
+        "LayerOcclusionLandmark":layer_occlusion_landmark,
         "LayerOcclusionBlur":layer_occlusion_blur,
         "LayerOcclusionNoise":layer_occlusion_noise,
         "LayerSpatialGridShuffle":layer_spatial_grid_shuffle,
         "LayerSpatialLandmarkRelocate":layer_spatial_landmark_relocate,
         "LayerStylisePointLight":layer_stylise_point_light,
-        "LayerStyliseOverlay":layer_stylise_overlay,
+        "LayerOverlay":layer_overlay,
         "LayerStyliseOpticalFlowDense":layer_stylise_optical_flow_dense,
         "LayerStyliseOpticalFlowSparse":layer_stylise_optical_flow_sparse
     }
@@ -59,22 +59,24 @@ def read_experiment_log(log_file_path:str) -> list[Layer]:
         fn = layer_name_map.get(name)
         params = layers.get(name)
 
-        onset = params.pop("time_onset")
-        offset = params.pop("time_offset")
-        timing_func = params.pop("timing_function")
-        rise = params.pop("rise_duration")
-        fall = params.pop("fall_duration")
-        mtc = params.pop("min_tracking_confidence")
-        mdc = params.pop("min_detection_confidence")
+        onset = params.pop("onset_time")
+        offset = params.pop("offset_time")
+        rise = params.pop("rise_time")
+        fall = params.pop("fall_time")
+        rise_fn = params.pop("rise_curve")
+        fall_fn = params.pop("fall_curve")
+        rise_fn_kwargs = params.pop("rise_curve_kwargs")
+        fall_fn_kwargs = params.pop("fall_curve_kwargs")
 
         timeconfig = TimingConfiguration(
-            time_onset=onset,
-            time_offset=offset,
-            timing_function=timing_dict.get(timing_func),
-            rise_duration=rise,
-            fall_duration=fall,
-            min_tracking_confidence=mtc,
-            min_face_detection_confidence=mdc
+            onset_time=onset,
+            offset_time=offset,
+            rise_time=rise,
+            fall_time=fall,
+            rise_curve=timing_dict.get(rise_fn),
+            fall_curve=timing_dict.get(fall_fn),
+            rise_curve_kwargs=rise_fn_kwargs,
+            fall_curve_kwargs=fall_fn_kwargs
         )
 
         # Resolve remaining params

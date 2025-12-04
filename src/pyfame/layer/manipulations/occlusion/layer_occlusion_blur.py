@@ -11,13 +11,14 @@ import numpy as np
 
 class BlurringParameters(BaseModel):
     blur_method:Union[str, int]
-    kernel_size:Tuple[PositiveInt, PositiveInt]
+    max_kernel_size:PositiveInt
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
 
     @field_validator("blur_method", mode="before")
     @classmethod
     def check_compatible_value(cls, value, info:ValidationInfo):
         field_name = info.field_name
+        blur_method_mapping = {11:"average", 12:"gaussian", 13:"median"}
 
         if isinstance(value, str):
             value = str.lower(value)
@@ -28,18 +29,18 @@ class BlurringParameters(BaseModel):
         elif isinstance(value, int):
             if value not in {11, 12, 13}:
                 raise ValueError(f"Unrecognized value for parameter {field_name}.")
-            return value
+            return blur_method_mapping.get(value)
         
         raise TypeError(f"{field_name} provided an invalid type. Must be one of int, str.")
 
-    @field_validator("kernel_size")
+    @field_validator("max_kernel_size")
     @classmethod
     def check_odd_dims(cls, value, info:ValidationInfo):
         field_name = info.field_name
 
-        # Ensures kernels provided are square, odd and greater or equal to (3,3)
-        if not (value[0] % 2 == 1 and value[1] % 2 == 1 and value[0] >= 3 and value[0] == value[1]):
-            raise ValueError(f"{field_name} expects odd, square kernel dimensions >= (3,3).")
+        # Ensures kernel size provided is odd and greater or equal to (3,3)
+        if not (value % 2 == 1 and value >= 3 and value <= 31):
+            raise ValueError(f"{field_name} must be odd and >= 3.")
         
         return value
 
@@ -54,14 +55,14 @@ class LayerOcclusionBlur(Layer):
         
         # Define class parameters
         self.blur_method = self.blur_params.blur_method
-        self.kernel_size = self.blur_params.kernel_size
+        self.max_kernel_size = self.blur_params.max_kernel_size
         self.landmark_paths = self.blur_params.landmark_paths
 
         # Snapshot of initial state
         self._snapshot_state()
     
     def supports_weight(self):
-        return False
+        return True
     
     def get_layer_parameters(self) -> dict:
         # Dump the pydantic models to get dict of full parameter list
@@ -71,43 +72,66 @@ class LayerOcclusionBlur(Layer):
         self._layer_parameters["time_offset"] = self.offset_t
         return dict(self._layer_parameters)
     
+    def temporal_weight_to_kernel(self, weight:float) -> int:
+        k = 0
+
+        if self.blur_method in {"average", "gaussian"}:
+            # linear progression
+            k = 3 + weight * (self.max_kernel_size - 3)
+        elif self.blur_method == "median":
+            # Median blur becomes to strong at higher kernel sizes
+            # so restrict to k//2
+            k_med = max(3, (self.max_kernel_size//2) | 1)
+            k = 3 + (weight**2) * (k_med - 3)
+        
+        k = int(round(k))
+        if k % 2 == 0:
+            k += 1
+        
+        return k
+
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float = None):
 
         # Blurring does not support weight, so weight will always be 0.0 or 1.0
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
 
         if weight == 0.0:
             return frame
-        else:
-            # Mask out region of interest
-            mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
-            mask = mask[:,:,np.newaxis]
-            output_frame = np.zeros_like(frame, dtype=np.uint8)
 
-            # Blur the input frame depending on user-specified blur method
-            match self.blur_method:
-                case "average" | 11:
-                    frame_blurred = cv.blur(frame, self.kernel_size)
-                    output_frame = np.where(mask == 255, frame_blurred, frame)
-                
-                case "gaussian" | 12:
-                    frame_blurred = cv.GaussianBlur(frame, self.kernel_size, 0)
-                    output_frame = np.where(mask == 255, frame_blurred, frame)
-                
-                case "median" | 13:
-                    frame_blurred = cv.medianBlur(frame, self.kernel_size[0])
-                    output_frame = np.where(mask == 255, frame_blurred, frame)
+        # Mask out region of interest
+        mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
+        mask = mask[:,:,np.newaxis]     #reshape to 3-channel
+        output_frame = np.zeros_like(frame, dtype=np.uint8)
+
+        k_size = self.temporal_weight_to_kernel(weight=weight)
+
+        # Blur the input frame depending on user-specified blur method
+        match self.blur_method:
+            case "average":
+                frame_blurred = cv.blur(frame, (k_size, k_size))
+                output_frame = np.where(mask == 255, frame_blurred, frame)
             
-            return output_frame
+            case "gaussian":
+                frame_blurred = cv.GaussianBlur(frame, (k_size, k_size), 0)
+                output_frame = np.where(mask == 255, frame_blurred, frame)
+            
+            case "median":
+                frame_blurred = cv.medianBlur(frame, k_size)
+                output_frame = np.where(mask == 255, frame_blurred, frame)
+        
+        return output_frame
 
-def layer_occlusion_blur(timing_configuration:TimingConfiguration | None = None, blur_method:str|int = "gaussian", landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, kernel_size:tuple[int,int] = (15,15)) -> LayerOcclusionBlur:
+def layer_occlusion_blur(timing_configuration:TimingConfiguration | None = None, blur_method:str|int = "gaussian", landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, max_kernel_size:int = 28) -> LayerOcclusionBlur:
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 
     try:
         params = BlurringParameters(
             blur_method=blur_method, 
-            kernel_size=kernel_size, 
+            max_kernel_size=max_kernel_size, 
             landmark_paths=landmark_paths
         )
     except ValidationError as e:

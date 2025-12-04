@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo, NonNegativeInt, PositiveFloat
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple, Optional, Any
 from pyfame.landmark.facial_landmarks import *
 from pyfame.landmark.blendshape_smoother import EyeBlendshapeSmoother
 from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
@@ -18,20 +18,24 @@ _OVERLAY_DIR = Path(__file__).parent / "overlay_images"
 # (127, 6) for right cheek scaling, center lm 119
 # (6, 356) for left cheek scaling, center 348
 # (127, 356) for facial-width scaling, center lm 6
+# consider adding overlay-specific y-offsets
 _OVERLAY_MAPPING = {
     "sunglasses": {
         "path": _OVERLAY_DIR / "sunglasses.png",
         "anchor_landmarks": (127, 356),
+        "center_landmark": 6,
         "scale_factor": None
     },
     "glasses": {
         "path": _OVERLAY_DIR / "glasses.png",
         "anchor_landmarks": (127, 356),
+        "center_landmark": 6,
         "scale_factor": None
     },
-    "teardrop_short_1": {
+    "teardrop_short_1": { # Update this with hard coded tear_left_cheek, tear_right_cheek
         "path": _OVERLAY_DIR / "teardrops" / "teardrop_short_1.png",
         "anchor_landmarks": (6, 356),
+        "center_landmark": 348,
         "scale_factor": 0.2
     }
 }
@@ -42,9 +46,6 @@ def compute_scale(landmarker_coordinates:list[dict], anchor_landmarks:tuple[int,
 
     if scale_factor is None:
         scale_factor = 1.0
-    
-    if anchor_landmarks is None:
-        anchor_landmarks = (127, 356)
     
     p1 = np.array([
         landmarker_coordinates[anchor_landmarks[0]][0],
@@ -58,8 +59,7 @@ def compute_scale(landmarker_coordinates:list[dict], anchor_landmarks:tuple[int,
     
     return np.linalg.norm(p1-p2) * scale_factor
 
-def load_overlay(overlay_name:str, landmarker_coordinates:list[tuple[int,int]], anchor_landmarks:tuple[int, int] | None = None, 
-                 scale_factor:float | None = None) -> tuple[cv.typing.MatLike, tuple, tuple, float]:
+def load_overlay(overlay_name:str, landmarker_coordinates:list[tuple[int,int]], scale_factor:float | None = None) -> tuple[cv.typing.MatLike, tuple, tuple, float]:
 
     global _OVERLAY_CACHE
 
@@ -67,6 +67,8 @@ def load_overlay(overlay_name:str, landmarker_coordinates:list[tuple[int,int]], 
     config = _OVERLAY_MAPPING[overlay_name]
     file_path = str(config["path"])
     scale_factor = config["scale_factor"]
+    anchor_landmarks = config["anchor_landmarks"]
+    center_landmark = config["center_landmark"]
 
     # lazy-loading the image
     if overlay_name not in _OVERLAY_CACHE:
@@ -75,13 +77,8 @@ def load_overlay(overlay_name:str, landmarker_coordinates:list[tuple[int,int]], 
             raise FileReadError("Error reading in file.")
     
     img = _OVERLAY_CACHE[overlay_name]
-
-    if anchor_landmarks is None:
-        anchor_landmarks = config["anchor_landmarks"]
-    
-    cx = int((landmarker_coordinates[anchor_landmarks[0]][0] + landmarker_coordinates[anchor_landmarks[1]][0])/2.0)
-    cy = int((landmarker_coordinates[anchor_landmarks[0]][1] + landmarker_coordinates[anchor_landmarks[1]][1])/2.0)
-    center_point = (cx, cy)
+        
+    center_point = landmarker_coordinates[center_landmark]
     
     if scale_factor is None:
         scale = compute_scale(landmarker_coordinates, anchor_landmarks)
@@ -92,7 +89,6 @@ def load_overlay(overlay_name:str, landmarker_coordinates:list[tuple[int,int]], 
         
 class OverlayParameters(BaseModel):
     overlay_type:Union[NonNegativeInt, str]
-    overlay_bounding_landmarks:Optional[Tuple[int,int]]
     overlay_scale_factor:Optional[float] = None
     y_offset:int
     pupil_scale_factor:PositiveFloat
@@ -121,16 +117,6 @@ class OverlayParameters(BaseModel):
         
         raise TypeError(f"Invalid type for parameter {field_name}. Expected int or str.")
     
-    @field_validator("overlay_bounding_landmarks")
-    @classmethod
-    def check_landmarks_in_range(cls, value, info:ValidationInfo):
-        if value is not None:
-            for lm in value:
-                if not 0 <= lm <= 477:
-                    raise ValueError("FaceLandmarker landmark ID's lie in the range [0-477].")
-        
-        return value
-    
     @field_validator("pupil_scale_factor")
     @classmethod
     def check_normalised_range(cls, value, info:ValidationInfo):
@@ -152,7 +138,6 @@ class LayerOverlay(Layer):
         
         # Declare class parameters
         self.overlay_type = self.overlay_params.overlay_type
-        self.anchor_landmarks = self.overlay_params.overlay_bounding_landmarks
         self.overlay_scale_factor = self.overlay_params.overlay_scale_factor
         self.y_offset = self.overlay_params.y_offset
         self.pupil_scale_factor = self.overlay_params.pupil_scale_factor
@@ -176,9 +161,12 @@ class LayerOverlay(Layer):
         self._layer_parameters["time_offset"] = self.offset_t
         return dict(self._layer_parameters)
     
-    def apply_layer(self, landmarker_coordinates, frame, dt, blendshapes):
+    def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float, blendshapes:Any):
 
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
 
         if weight == 0.0:
             return frame
@@ -246,7 +234,6 @@ class LayerOverlay(Layer):
             overlay, anchor_lms, center_point, scale = load_overlay(
                 overlay_name=self.overlay_type,
                 landmarker_coordinates=landmarker_coordinates,
-                anchor_landmarks=self.anchor_landmarks,
                 scale_factor=self.overlay_scale_factor
             )
 
@@ -296,8 +283,8 @@ class LayerOverlay(Layer):
 
         return overlayed_frame
         
-def layer_overlay(timing_configuration:TimingConfiguration | None = None, overlay_type:int|str = "sunglasses", overlay_bounding_landmarks:tuple[int,int] | None = None, 
-                  overlay_scale_factor:float | None = None, y_offset:int = 20, pupil_scale_factor:float = 0.25) -> LayerOverlay:
+def layer_overlay(timing_configuration:TimingConfiguration | None = None, overlay_type:int|str = "sunglasses", 
+                  overlay_scale_factor:float | None = None, y_offset:int = 10, pupil_scale_factor:float = 0.25) -> LayerOverlay:
     
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
@@ -306,7 +293,6 @@ def layer_overlay(timing_configuration:TimingConfiguration | None = None, overla
     try:
         params = OverlayParameters(
             overlay_type=overlay_type,
-            overlay_bounding_landmarks=overlay_bounding_landmarks, 
             overlay_scale_factor=overlay_scale_factor, 
             y_offset = y_offset,
             pupil_scale_factor=pupil_scale_factor

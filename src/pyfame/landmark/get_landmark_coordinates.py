@@ -83,7 +83,7 @@ def get_pixel_coordinates(frame_rgb:cv.typing.MatLike, face_landmarker:Any, time
     
     if lm_results.face_blendshapes:
         return (pixel_coords, lm_results.face_blendshapes[0])
-    return pixel_coords
+    return (pixel_coords, None)
 
 def get_pixel_coordinates_from_landmark(landmarker_coordinates:Any, landmark_path:list[tuple]) -> list[tuple[int,int]]:
     path_screen_coords = []
@@ -106,7 +106,6 @@ def get_concave_landmark_coordinates(concave_path) -> list[tuple[int,int]]:
     lc_path = create_landmark_path(LEFT_CHEEK_IDX)
     rc_path = create_landmark_path(RIGHT_CHEEK_IDX)
     chin_path = create_landmark_path(CHIN_IDX)
-    lips_path = create_landmark_path(LIPS_IDX)
     output_path = []
 
     match concave_path:
@@ -139,13 +138,10 @@ def get_concave_landmark_coordinates(concave_path) -> list[tuple[int,int]]:
            output_path.extend(LANDMARK_FACE_OVAL)
            output_path.extend(LANDMARK_LEFT_EYE_REGION)
            output_path.extend(LANDMARK_RIGHT_EYE_REGION)
-           output_path.extend(LANDMARK_LIPS)
+           output_path.extend(LANDMARK_MOUTH_REGION)
         # Chin
         case [(6,)]:    
             output_path.extend(chin_path)
-        
-        case [(7,)]:
-            output_path.extend(lips_path)
         
         case [(8,)]:
             output_path.extend(LANDMARK_LEFT_EYE, LANDMARK_RIGHT_EYE)

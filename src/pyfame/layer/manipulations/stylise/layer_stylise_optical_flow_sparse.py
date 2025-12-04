@@ -150,7 +150,10 @@ class LayerStyliseOpticalFlowSparse(Layer):
                 raise ValueError("File_path must be provided to apply_layer() when precise_colour_scale = True.")
             self.precompute_colour_scale(file_path)
 
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            raise IncompatibleFileError("LayerStyliseOpticalFlowSparse can only operate on video files.")
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
 
         if weight == 0.0:
             return frame

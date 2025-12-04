@@ -49,44 +49,47 @@ class LayerColourSaturation(Layer):
         self._layer_parameters["time_offset"] = self.offset_t
         return dict(self._layer_parameters)
     
-    def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float = None):
+    def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
         
-        weight = super().compute_weight(dt, self.supports_weight())
+        if dt is None:
+            weight = 1.0
+        else:
+            weight = super().compute_weight(dt, self.supports_weight())
         
         # Occurs when the dt < onset_time, or > offset_time
         if weight == 0.0:
             return frame
-        else:
-            # Mask out our region of interest
-            mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
+        
+        # Mask out our region of interest
+        mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
 
-            # Otsu thresholding to seperate foreground and background
-            grey_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-            grey_blurred = cv.GaussianBlur(grey_frame, (7,7), 0)
-            thresh_val, thresholded = cv.threshold(grey_blurred, 0, 255, cv.THRESH_BINARY_INV | cv.THRESH_OTSU)
+        # Otsu thresholding to seperate foreground and background
+        grey_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        grey_blurred = cv.GaussianBlur(grey_frame, (7,7), 0)
+        thresh_val, thresholded = cv.threshold(grey_blurred, 0, 255, cv.THRESH_BINARY_INV | cv.THRESH_OTSU)
 
-            # Adding a temporary image border to allow for correct floodfill behaviour
-            bordered_thresholded = cv.copyMakeBorder(thresholded, 10, 10, 10, 10, cv.BORDER_CONSTANT)
-            floodfilled = bordered_thresholded.copy()
-            cv.floodFill(floodfilled, None, (0,0), 255)
+        # Adding a temporary image border to allow for correct floodfill behaviour
+        bordered_thresholded = cv.copyMakeBorder(thresholded, 10, 10, 10, 10, cv.BORDER_CONSTANT)
+        floodfilled = bordered_thresholded.copy()
+        cv.floodFill(floodfilled, None, (0,0), 255)
 
-            # Removing temporary border and creating foreground mask
-            floodfilled = floodfilled[10:-10, 10:-10]
-            floodfilled = cv.bitwise_not(floodfilled)
-            foreground = cv.bitwise_or(thresholded, floodfilled)
+        # Removing temporary border and creating foreground mask
+        floodfilled = floodfilled[10:-10, 10:-10]
+        floodfilled = cv.bitwise_not(floodfilled)
+        foreground = cv.bitwise_or(thresholded, floodfilled)
 
-            # Convert the image into the HSV space so we can manipulate the saturation
-            img_hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV).astype(np.float32)
-            # Split the image channels so only the saturation can be shifted
-            h,s,v = cv.split(img_hsv)
-            s = np.where(mask == 255, s + (weight * self.magnitude), s)
-            np.clip(s,0,255)
-            img_hsv = cv.merge([h,s,v])
-            
-            # Convert the HSV image back to BGR before returning the processed image
-            img_bgr = cv.cvtColor(img_hsv.astype(np.uint8), cv.COLOR_HSV2BGR)
-            img_bgr[foreground == 0] = frame[foreground == 0]
-            return img_bgr
+        # Convert the image into the HSV space so we can manipulate the saturation
+        img_hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV).astype(np.float32)
+        # Split the image channels so only the saturation can be shifted
+        h,s,v = cv.split(img_hsv)
+        s = np.where(mask == 255, s + (weight * self.magnitude), s)
+        np.clip(s,0,255)
+        img_hsv = cv.merge([h,s,v])
+        
+        # Convert the HSV image back to BGR before returning the processed image
+        img_bgr = cv.cvtColor(img_hsv.astype(np.uint8), cv.COLOR_HSV2BGR)
+        img_bgr[foreground == 0] = frame[foreground == 0]
+        return img_bgr
         
 def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, magnitude:float = -12.0) -> LayerColourSaturation:
     # Populate with defaults if None
