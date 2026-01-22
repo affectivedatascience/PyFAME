@@ -27,11 +27,11 @@ class BarOcclusionParameters(BaseModel):
     @field_validator("landmark_paths", mode="before")
     @classmethod
     def check_compatible_path(cls, value, info:ValidationInfo):
-        valid_paths = [LANDMARK_LEFT_EYE_REGION, LANDMARK_RIGHT_EYE_REGION, LANDMARK_BOTH_EYE_REGIONS, LANDMARK_NOSE, LANDMARK_LIPS, LANDMARK_MOUTH_REGION]
+        valid_paths = [LANDMARK_LEFT_EYE_REGION, LANDMARK_RIGHT_EYE_REGION, LANDMARK_BOTH_EYE_REGIONS, LANDMARK_NOSE, LANDMARK_MOUTH_REGION]
         field_name = info.field_name
                 
         if value not in valid_paths:
-            raise ValueError(f"Incompatible path provided in {field_name}. Please provide one of: LEFT_EYE_PATH, RIGHT_EYE_PATH, BOTH_EYES_PATH, NOSE_PATH, LIPS_PATH, MOUTH_PATH.")
+            raise ValueError(f"Incompatible path provided in {field_name}. Please provide one of: LANDMARK_LEFT_EYE_REGION, LANDMARK_RIGHT_EYE_REGION, LANDMARK_BOTH_EYE_REGIONS, LANDMARK_NOSE, LANDMARK_MOUTH_REGION.")
         
         return value
 
@@ -64,8 +64,8 @@ class LayerOcclusionBar(Layer):
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.occlude_params.model_dump())
-        self._layer_parameters["time_onset"] = self.onset_t
-        self._layer_parameters["time_offset"] = self.offset_t
+        self._layer_parameters["onset_time_msec"] = self.onset_t
+        self._layer_parameters["offset_time_msec"] = self.offset_t
         return dict(self._layer_parameters)
     
     def set_min_max_landmarks(self, landmarker_coordinates, coordinate_array):

@@ -35,8 +35,8 @@ class LayerSpatialLandmarkRelocate(Layer):
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.relocate_params.model_dump())
-        self._layer_parameters["time_onset"] = self.onset_t
-        self._layer_parameters["time_offset"] = self.offset_t
+        self._layer_parameters["onset_time_msec"] = self.onset_t
+        self._layer_parameters["offset_time_msec"] = self.offset_t
         return dict(self._layer_parameters)
     
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float) -> cv.typing.MatLike:
@@ -88,13 +88,13 @@ class LayerSpatialLandmarkRelocate(Layer):
         le_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_EYE_REGION)
         re_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_EYE_REGION)
         nose_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_NOSE)
-        lips_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LIPS)
+        lips_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_MOUTH_REGION)
 
         # Creating boolean masks of each landmark region
         le_mask = mask_from_landmarks(frame, LANDMARK_LEFT_EYE_REGION, landmarker_coordinates)
         re_mask = mask_from_landmarks(frame, LANDMARK_RIGHT_EYE_REGION, landmarker_coordinates)
         nose_mask = mask_from_landmarks(frame, LANDMARK_NOSE, landmarker_coordinates)
-        lip_mask = mask_from_landmarks(frame, LANDMARK_LIPS, landmarker_coordinates)
+        lip_mask = mask_from_landmarks(frame, LANDMARK_MOUTH_REGION, landmarker_coordinates)
         fo_mask = mask_from_landmarks(frame, LANDMARK_FACE_OVAL, landmarker_coordinates)
 
         masks = [le_mask, re_mask, nose_mask, lip_mask]

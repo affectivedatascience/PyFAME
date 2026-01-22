@@ -298,11 +298,11 @@ def analyse_optical_flow_sparse(file_paths:pd.DataFrame, landmarks_to_track:list
                 "number of points":num_points
             })
             
-            outputs.update({f"{filename}":output_df})
+            outputs.update({f"{file}":output_df})
         
         else:
             cols = ["timestamp", "old x", "old y", "new x", "new y", "magnitude", "angle"]
             output_df = pd.DataFrame(full_stats, columns=cols)
-            outputs.update({f"{filename}":output_df})
+            outputs.update({f"{file}":output_df})
     
     return outputs

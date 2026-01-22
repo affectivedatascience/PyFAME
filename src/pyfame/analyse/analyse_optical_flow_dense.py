@@ -164,6 +164,6 @@ def analyse_optical_flow_dense(file_paths:pd.DataFrame, frame_step:int = 5) -> d
             "mean angle":mean_angles,
             "deviation angle":std_angles
         })
-        outputs.update({f"{filename}":output_df})
+        outputs.update({f"{file}":output_df})
     
     return outputs

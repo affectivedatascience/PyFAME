@@ -25,8 +25,8 @@ def resolve_timing(layer:Layer, video_duration:float):
 
     # Update timing config object
     layer.config = layer.config.model_copy(update={
-        "onset_time": onset,
-        "offset_time": offset
+        "onset_time_msec": onset,
+        "offset_time_msec": offset
     })
 
     # keep layer.self params in sync
@@ -140,7 +140,7 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
         tqdm(
             absolute_paths, 
             total=len(absolute_paths), 
-            desc="Files processed:",
+            desc="Files processed",
             bar_format='[{elapsed}<{remaining}] {n_fmt}/{total_fmt} | {l_bar}{bar} {rate_fmt}{postfix}',
             position=0,
             dynamic_ncols=True
@@ -209,7 +209,7 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
         # Loop over the current file until completion; (single iteration for static images)
         pb = tqdm(
             total=frame_count, 
-            desc="Frame(s) processed:",
+            desc="Frames processed",
             bar_format='[{elapsed}<{remaining}] {n_fmt}/{total_fmt} | {l_bar}{bar} {rate_fmt}{postfix}', 
             colour="blue",
             position=1,

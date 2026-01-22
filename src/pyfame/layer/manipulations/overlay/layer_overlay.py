@@ -157,8 +157,8 @@ class LayerOverlay(Layer):
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.overlay_params.model_dump())
-        self._layer_parameters["time_onset"] = self.onset_t
-        self._layer_parameters["time_offset"] = self.offset_t
+        self._layer_parameters["onset_time_msec"] = self.onset_t
+        self._layer_parameters["offset_time_msec"] = self.offset_t
         return dict(self._layer_parameters)
     
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float, blendshapes:Any):

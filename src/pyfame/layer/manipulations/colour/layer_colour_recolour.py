@@ -16,14 +16,14 @@ class RecolourParameters(BaseModel):
 
     @field_validator('focus_colour')
     @classmethod
-    def check_compatible_value(cls, value, info:ValidationInfo):
+    def check_valid_focus_colour(cls, value, info:ValidationInfo):
         field_name = info.field_name
         if isinstance(value, int):
             if value not in SHIFT_COLOUR_OPTIONS:
-                raise ValueError(f"{field_name} has been provided an unrecognized value.")
+                raise ValidationError(f"{field_name} has been provided an unrecognized value.")
         elif isinstance(value, str):
-            if value not in ["red", "green", "blue", "yellow"]:
-                raise ValueError(f"{field_name} has been provided an unrecognized value.")
+            if value not in {"red", "green", "blue", "yellow"}:
+                raise ValidationError(f"{field_name} has been provided an unrecognized value.")
         
         return value
 
@@ -56,8 +56,8 @@ class LayerColourRecolour(Layer):
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.colour_params.model_dump())
-        self._layer_parameters["time_onset"] = self.onset_t
-        self._layer_parameters["time_offset"] = self.offset_t
+        self._layer_parameters["onset_time_msec"] = self.onset_t
+        self._layer_parameters["offset_time_msec"] = self.offset_t
         return dict(self._layer_parameters)
     
     def _adjust_landmark_paths_eye_landmarks(self):
@@ -144,7 +144,7 @@ class LayerColourRecolour(Layer):
         left_eye_open, right_eye_open = self.eye_blendshape_smoother.update(blendshapes)
         le_mask = mask_from_landmarks(frame, LANDMARK_LEFT_EYE, landmarker_coordinates)
         re_mask = mask_from_landmarks(frame, LANDMARK_RIGHT_EYE, landmarker_coordinates)
-
+        
         # Convert input image to CIE La*b* color space (perceptually uniform space)
         img_LAB = cv.cvtColor(frame, cv.COLOR_BGR2LAB).astype(np.float32)
         # Split the image into individual channels for precise colour manipulation
@@ -191,6 +191,9 @@ class LayerColourRecolour(Layer):
                     b = np.where(re_mask==255, b + (weight * self.magnitude), b)
 
                 np.clip(b, -128, 127)
+
+            case _:
+                raise ValueError("Unidentified or incompatible focus colour passed to LayerColourRecolour.")
         
         # After shifting the colour channels, merge the individual channels back into one image
         img_LAB = cv.merge([l,a,b])

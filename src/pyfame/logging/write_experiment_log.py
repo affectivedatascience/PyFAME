@@ -22,10 +22,11 @@ def write_experiment_log(layers:list[Layer], working_directory_path:str) -> None
         for layer in layers:
             layer_type = type(layer).__name__
             parameters = layer.get_layer_parameters()
-
-            parameters.update({"landmark_paths":get_landmark_names(parameters.get("landmark_paths"))})
-            parameters.update({"rise_curve":type(parameters.get("rise_curve")).__name__})
-            parameters.update({"fall_curve":type(parameters.get("fall_curve")).__name__})
+            
+            if parameters.get("landmark_paths"):
+                parameters.update({"landmark_paths":get_landmark_names(parameters.get("landmark_paths"))})
+            parameters.update({"rise_curve":parameters.get("rise_curve").__name__})
+            parameters.update({"fall_curve":parameters.get("fall_curve").__name__})
 
             layer_dict[layer_type] = parameters
 

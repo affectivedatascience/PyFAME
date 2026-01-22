@@ -317,7 +317,7 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
                 "mean chin blue": chin_blue_means
             })
 
-            outputs.update({f"{filename}":output_df})
+            outputs.update({f"{file}":output_df})
 
         elif colour_space == COLOUR_SPACE_HSV:
             output_df = pd.DataFrame({
@@ -336,7 +336,7 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
                 "mean chin value": chin_val_means
             })
 
-            outputs.update({f"{filename}":output_df})
+            outputs.update({f"{file}":output_df})
 
         else:
             output_df = pd.DataFrame({
@@ -347,6 +347,6 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
                 "mean chin value": chin_grey_means
             })
 
-            outputs.update({f"{filename}":output_df})
+            outputs.update({f"{file}":output_df})
 
     return outputs    

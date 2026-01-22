@@ -1,20 +1,15 @@
 ### TODO
-
-# Colour, Mask, Occlusion, spatial, overlay, layers now work as expected (+ Analysis methods)
-# Don't forget to go through stylise and temporal layers, and conversion methods
-
-# Consider looking into passing both the unaltered and current (altered) frame to each layer in LayerPipeline
+# Update temporal shuffle and img_to_video functions to work with file_paths dataframe
 # If I havent already, weigh pupil size by timestamp in pupil overlay.
-# Also adding a greyscale conversion colouring layer 
+# Update pytest suite for basic i/o and error raise checks
+# MAYBE: Look for more overlay objects, consider creating mappings for tracking midpoints of overlays
+# Split create_paths and get_paths into two distinct functionalities
 
-# Look for more overlay objects, consider creating mappings for tracking midpoints of overlays
-# Talk to stephen about timing function wrapper, would allow for asymetric timing curves
+# Expand analysis colour channel means to take a list of landmarks to sample
+# Rename TEMPORAL_SHUFFLE constants to FRAME_SHUFFLE_...
+
 
 import pyfame as pf
 
 file_paths = pf.make_paths()
-timing_config = pf.TimingConfiguration(onset_time=250, rise_time=750, rise_curve=pf.timing_gaussian, fall_time=750, fall_curve=pf.timing_sigmoid)
-
-col = pf.layer_color_recolor(timing_config, pf.LANDMARK_FACE_OVAL, magnitude=20.0)
-
-pf.apply_layers(file_paths.iloc[[0]], col)
+pf.apply_frame_shuffle(file_paths.iloc[[1]], pf.TEMPORAL_SHUFFLE_PALINDROME)

@@ -69,10 +69,10 @@ def read_experiment_log(log_file_path:str) -> list[Layer]:
         fall_fn_kwargs = params.pop("fall_curve_kwargs")
 
         timeconfig = TimingConfiguration(
-            onset_time=onset,
-            offset_time=offset,
-            rise_time=rise,
-            fall_time=fall,
+            onset_time_msec=onset,
+            offset_time_msec=offset,
+            rise_time_msec=rise,
+            fall_time_msec=fall,
             rise_curve=timing_dict.get(rise_fn),
             fall_curve=timing_dict.get(fall_fn),
             rise_curve_kwargs=rise_fn_kwargs,

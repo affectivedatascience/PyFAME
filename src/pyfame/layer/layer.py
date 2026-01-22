@@ -1,15 +1,15 @@
 from pydantic import BaseModel, NonNegativeFloat
-from typing import Callable, Optional, Any
+from typing import Callable, Optional
 from abc import ABC, abstractmethod
 from cv2.typing import MatLike
 from pyfame.layer.timing_curves import timing_linear
 import copy
 
 class TimingConfiguration(BaseModel):
-    onset_time:Optional[NonNegativeFloat] = None
-    offset_time:Optional[int] = None
-    rise_time:NonNegativeFloat = 500.0
-    fall_time:NonNegativeFloat = 500.0
+    onset_time_msec:Optional[NonNegativeFloat] = None
+    offset_time_msec:Optional[int] = None
+    rise_time_msec:NonNegativeFloat = 500.0
+    fall_time_msec:NonNegativeFloat = 500.0
     rise_curve:Callable[...,float] = timing_linear
     fall_curve:Callable[...,float] = timing_linear
     rise_curve_kwargs:Optional[dict] = None
@@ -23,10 +23,10 @@ class Layer(ABC):
         # if config is none, populate with defaults
         self.config = configuration or TimingConfiguration()
 
-        self.onset_t = self.config.onset_time
-        self.offset_t = self.config.offset_time
-        self.rise = self.config.rise_time
-        self.fall = self.config.fall_time
+        self.onset_t = self.config.onset_time_msec
+        self.offset_t = self.config.offset_time_msec
+        self.rise = self.config.rise_time_msec
+        self.fall = self.config.fall_time_msec
         self.rise_fn = self.config.rise_curve
         self.fall_fn = self.config.fall_curve
         self.rise_kwargs = self.config.rise_curve_kwargs
