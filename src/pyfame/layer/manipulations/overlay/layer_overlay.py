@@ -165,6 +165,8 @@ class LayerOverlay(Layer):
 
         if dt is None:
             weight = 1.0
+        elif self.overlay_type == "pupil_dilation":
+            weight = super().compute_weight(dt, True)
         else:
             weight = super().compute_weight(dt, self.supports_weight())
 
@@ -213,7 +215,7 @@ class LayerOverlay(Layer):
             if left_eye_open:
                 sclera_mask = mask_from_landmarks(frame, LANDMARK_LEFT_EYE, landmarker_coordinates)
                 pupil_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-                cv.circle(pupil_mask, centroid_left_pupil, pupil_radius, (255,255,255), -1)
+                cv.circle(pupil_mask, centroid_left_pupil, int(weight * pupil_radius), (255,255,255), -1)
 
                 # Overlay the pupil only where it lies in the visible sclera
                 masked_pupil = cv.bitwise_and(pupil_mask, sclera_mask)
@@ -222,7 +224,7 @@ class LayerOverlay(Layer):
             if right_eye_open:
                 sclera_mask = mask_from_landmarks(frame, LANDMARK_RIGHT_EYE, landmarker_coordinates)
                 pupil_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-                cv.circle(pupil_mask, centroid_right_pupil, pupil_radius, (255,255,255), -1)
+                cv.circle(pupil_mask, centroid_right_pupil, int(weight * pupil_radius), (255,255,255), -1)
 
                 # Overlay the pupil only where it lies in the visible sclera
                 masked_pupil = cv.bitwise_and(pupil_mask, sclera_mask)

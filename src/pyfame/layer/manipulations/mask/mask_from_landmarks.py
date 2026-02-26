@@ -4,10 +4,6 @@ from pyfame.landmark.facial_landmarks import *
 from pyfame.utilities.exceptions import *
 import cv2 as cv
 import numpy as np
-import logging
-
-logger = logging.getLogger("pyfame")
-debug_logger = logging.getLogger("pyfame.debug")
 
 def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[int,int]]] | list[tuple[int,int]], landmarker_coordinates) -> cv.typing.MatLike:
     
@@ -18,6 +14,7 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
     rc_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_CHEEK)
     chin_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_CHIN)
     nose_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_NOSE)
+    nose_wide_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, create_landmark_path(NOSE_WIDE_IDX))
     ler_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_EYE_REGION)
     rer_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_EYE_REGION)
     le_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_EYE)
@@ -90,7 +87,7 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                     rc_mask = rc_mask.astype(bool)
 
                     nose_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-                    nose_mask = cv.fillConvexPoly(nose_mask, np.array(nose_screen_coords), 1)
+                    nose_mask = cv.fillConvexPoly(nose_mask, np.array(nose_wide_screen_coords), 1)
                     nose_mask = nose_mask.astype(bool)
 
                     masked_frame[lc_mask] = 255
@@ -244,7 +241,7 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                 rc_mask = rc_mask.astype(bool)
 
                 nose_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-                nose_mask = cv.fillConvexPoly(nose_mask, np.array(nose_screen_coords), 1)
+                nose_mask = cv.fillConvexPoly(nose_mask, np.array(nose_wide_screen_coords), 1)
                 nose_mask = nose_mask.astype(bool)
 
                 masked_frame[lc_mask] = 255

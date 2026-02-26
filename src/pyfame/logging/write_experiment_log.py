@@ -1,11 +1,49 @@
 import json
 import os
+from enum import Enum
 from datetime import datetime
 from importlib.resources import files
 import jsonschema
 from jsonschema import ValidationError
 from pyfame.layer.layer import Layer
 from pyfame.utilities.general_utilities import get_landmark_names
+
+def make_json_serializable(obj):
+    """
+    Recursively converts an object into json serializable types.
+    Converts custom Enum classes to their `.value`.
+    
+    Parameters
+    ----------
+    obj: dict[str, any]
+        Initially a log dictionary containing metadata and a scaffolded 
+        subdictionary structure containing layer parameters. On recursive 
+        calls can be an object of any type.
+    
+    Returns
+    -------
+    dict[str, any]
+        The same log dictionary passed in, with non-serializable types 
+        converted to json serializable equivalents.
+    """
+
+    if isinstance(obj, Enum):
+        return obj.name
+    
+    elif isinstance(obj, dict):
+        # Recursively serialize all dict values
+        return {k: make_json_serializable(v) for k,v in obj.items()}
+    
+    elif isinstance(obj, list):
+        # Recursively serialize all list values
+        return [make_json_serializable(v) for v in obj]
+    
+    elif isinstance(obj, tuple):
+        # Recursively serialize all tuple values
+        return tuple(make_json_serializable(v) for v in obj)
+    
+    else:
+        return obj
 
 def write_experiment_log(layers:list[Layer], working_directory_path:str) -> None:
     if os.getenv("PYTEST_RUNNING") == "1":
@@ -35,6 +73,8 @@ def write_experiment_log(layers:list[Layer], working_directory_path:str) -> None
             "timestamp":timestamp,
             "layers": layer_dict
         }
+
+        log_data = make_json_serializable(log_data)
 
         # Attempt to validate json against schema
         try:

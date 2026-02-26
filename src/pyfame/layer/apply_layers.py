@@ -236,11 +236,11 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
 
             if not static_image_mode:
                 # Getting the current video timestamp
-                output_frame = pipeline.apply_layers(landmark_coordinates, frame, dt, file_path=file, blendshapes=blendshapes)
+                output_frame = pipeline.apply_layers(landmark_coordinates, frame, dt, blendshapes=blendshapes)
                 output_frame = output_frame.astype(np.uint8)
                 result.write(output_frame)
             else:
-                output_frame = pipeline.apply_layers(landmark_coordinates, frame, None, file_path=file, blendshapes=blendshapes)
+                output_frame = pipeline.apply_layers(landmark_coordinates, frame, None, blendshapes=blendshapes)
                 output_frame = output_frame.astype(np.uint8)
                 success = cv.imwrite(dir_file_path, output_frame)
                 if not success:

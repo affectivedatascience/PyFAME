@@ -8,6 +8,25 @@ import cv2 as cv
 import numpy as np
 
 class BrightnessParameters(BaseModel):
+    """
+    Configuration model defining the control parameters for 
+    manipulating the brightness of a frame or image.
+
+    This class inherits from pydantic's `BaseModel` to provide validation and 
+    default handling of brightness parameters.
+
+    Attributes
+    ----------
+    landmark_paths : list of list of tuple of int or list of tuple of int
+        A list of one or more closed landmark paths representing the 
+        region in which the manipulation will be applied.
+    magnitude : float
+        The degree by which to increase or decrease the brightness.
+        Used as an additive factor to increase the global intensity of a frame
+        or image. Accepts values in the range [-25.0, 25.0]. Magnitudes outside
+        of this range tend to cause artifacts in the resulting image.
+    """
+
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
     magnitude:float
 
@@ -21,14 +40,72 @@ class BrightnessParameters(BaseModel):
         return value
 
 class LayerColourBrightness(Layer):
+    """
+    Manipulation layer that adjusts image brightness within a specified
+    landmark-defined region over time.
+
+    This layer applies an additive brightness adjustment to a region of
+    interest defined by one or more facial landmark paths. The strength of
+    the manipulation may be modulated over time using the timing and
+    weighting configuration inherited from `Layer`.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration
+        Timing configuration controlling onset, offset, rise/fall durations,
+        and temporal weighting behavior.
+    brightness_parameters : BrightnessParameters
+        Configuration model specifying the landmark region(s) and brightness
+        magnitude of the manipulation.
+
+    Attributes
+    ----------
+    time_config : TimingConfiguration
+        Timing configuration used by the layer.
+    bright_params : BrightnessParameters
+        Brightness-specific configuration parameters.
+    landmark_paths : list of list of tuple of int or list of tuple of int
+        Landmark paths defining the region in which brightness manipulation
+        is applied.
+    magnitude : float
+        The degree by which to increase or decrease the brightness.
+        Used as an additive factor to increase the global intensity of a frame
+        or image. Accepts values in the range [-25.0, 25.0]. Magnitudes outside
+        of this range tend to cause artifacts in the resulting image.
+
+    Notes
+    -----
+    - Positive magnitude values increase brightness, while negative values
+      decrease brightness.
+    - The effective magnitude at a given time is scaled by the temporal
+      weight computed from the timing configuration.
+    - This layer supports continuous temporal weighting.
+    """
+
     def __init__(self, timing_configuration:TimingConfiguration, brightness_parameters:BrightnessParameters):
-        
+        """
+        Initialize a brightness manipulation layer.
+
+        Parameters
+        ----------
+        timing_configuration : TimingConfiguration
+            Timing configuration controlling when the brightness manipulation
+            is applied and how it transitions on and off.
+        brightness_parameters : BrightnessParameters
+            Parameters defining the target landmark region(s) and the
+            brightness adjustment magnitude.
+
+        Notes
+        -----
+        - The timing configuration is passed to the superclass `Layer`.
+        - A snapshot of the initial layer state is taken after initialization
+          to allow safe resetting between independent applications.
+        """
         self.time_config = timing_configuration
         self.bright_params = brightness_parameters
 
         # Initialise the superclass
         super().__init__(self.time_config)
-        self.static_image_mode = False
 
         # Define class parameters
         self.landmark_paths = self.bright_params.landmark_paths
@@ -38,9 +115,30 @@ class LayerColourBrightness(Layer):
         self._snapshot_state()
     
     def supports_weight(self):
+        """
+        Indicate whether the layer supports temporal weighting.
+
+        Returns
+        -------
+        bool
+            `True` if the layer supports continuous rise/fall weighting,
+            `False` if it operates as a binary on/off manipulation.
+        """
         return True
     
     def get_layer_parameters(self) -> dict:
+        """
+        Return the parameters defining this layer.
+
+        This method should expose all configurable parameters required
+        to reproduce the layer's behavior (excluding timing parameters,
+        which are handled separately).
+
+        Returns
+        -------
+        dict
+            Dictionary mapping parameter names to their current values.
+        """
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.bright_params.model_dump())
@@ -49,7 +147,28 @@ class LayerColourBrightness(Layer):
         return dict(self._layer_parameters)
 
     def apply_layer(self, landmarker_coordinates:list[tuple[int, int]], frame:cv.typing.MatLike, dt:float):
+        """
+        Apply the layer's manipulation to a single frame.
+
+        Parameters
+        ----------
+        landmarker_coordinates : list of tuple of int
+            Facial landmark coordinates associated with the current frame.
+        frame : MatLike
+            Input image frame to which the manipulation is applied.
+        dt : float
+            Current time (in milliseconds).
+
+        Returns
+        -------
+        MatLike
+            The manipulated frame.
         
+        Raises
+        ------
+        ValueError
+            Given invalid or unrecognized parameter values.
+        """
         if dt is None:
             weight = 1.0
         else:
@@ -61,8 +180,6 @@ class LayerColourBrightness(Layer):
         
         # Mask out the region of interest
         mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
-        # Reshape the mask for compatibility with cv2.convertScaleAbs()
-        mask = np.reshape(mask, (mask.shape[0], mask.shape[1], 1))
 
         # Otsu thresholding to seperate foreground and background
         grey_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -79,12 +196,46 @@ class LayerColourBrightness(Layer):
         floodfilled = cv.bitwise_not(floodfilled)
         foreground = cv.bitwise_or(thresholded, floodfilled)
 
+        # Reshape the mask for compatibility with cv2.convertScaleAbs()
+        mask = np.reshape(mask, (mask.shape[0], mask.shape[1], 1))
+
         # Within the masked region, upscale the brightness according to the current weight
         img_brightened = np.where(mask == 255, cv.convertScaleAbs(src=frame, alpha=1, beta=(weight * self.magnitude)), frame)
         img_brightened[foreground == 0] = frame[foreground == 0]
         return img_brightened
 
 def layer_colour_brightness(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, magnitude:float = 20.0) -> LayerColourBrightness:
+    """
+    Factory function for the brightness manipulation layer.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration or None, optional
+        A pydantic model containing timing configurations controlling onset, 
+        offset, rise/fall durations, and weighting curves. If `None`, a 
+        default `TimingConfiguration` is instantiated. The default 
+        instantiation assumes a linear rise and fall transition, onset at 
+        0.0 and offset at the video's duration.
+    landmark_paths: list of list of tuple of int or list of tuple of int, default=LANDMARK_FACE_OVAL
+        A list of one or more closed landmark paths representing the 
+        region in which the manipulation will be applied.
+    magnitude: float, default=20.0
+        The degree by which to increase or decrease the brightness.
+        Used as an additive factor to increase the global intensity of a frame
+        or image. Accepts values in the range [-25.0, 25.0]. Magnitudes outside
+        of this range tend to cause artifacts in the resulting image.
+    
+    Returns
+    -------
+    LayerColourBrightness
+        An instance of the brightness manipulation layer.
+    
+    Raises
+    ------
+    ValueError
+        When provided invalid or unrecognized parameter values.
+    
+    """
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 

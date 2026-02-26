@@ -232,7 +232,7 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
                 continue
             
             # Get facial landmark set as screen coordinates
-            landmarker_coordinates = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker)
+            landmarker_coordinates, _ = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker)
 
             # Creating masks
             cheeks_mask = mask_from_landmarks(frame, LANDMARK_BOTH_CHEEKS, landmarker_coordinates)

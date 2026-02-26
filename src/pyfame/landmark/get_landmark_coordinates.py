@@ -35,8 +35,8 @@ def get_face_landmarker(running_mode:str = "image", num_faces:int = 1, min_face_
     detector = vision.FaceLandmarker.create_from_options(options)
 
     return detector
-
-def get_pixel_coordinates(frame_rgb:cv.typing.MatLike, face_landmarker:Any, timestamp_msec:float | None = None) -> tuple[tuple[list[tuple[int,int]]], list[Any]] | tuple[list[tuple[int,int]]]:
+                                                                                                                   
+def get_pixel_coordinates(frame_rgb:cv.typing.MatLike, face_landmarker:Any, timestamp_msec:float | None = None) -> tuple[list[tuple[int,int]], list[Any] | None]:
     
     # Save the orignal dimensions for determining padding
     original_h, original_w = frame_rgb.shape[:2]
@@ -106,6 +106,7 @@ def get_concave_landmark_coordinates(concave_path) -> list[tuple[int,int]]:
     lc_path = create_landmark_path(LEFT_CHEEK_IDX)
     rc_path = create_landmark_path(RIGHT_CHEEK_IDX)
     chin_path = create_landmark_path(CHIN_IDX)
+    nose_path = create_landmark_path(NOSE_WIDE_IDX)
     output_path = []
 
     match concave_path:
@@ -126,7 +127,7 @@ def get_concave_landmark_coordinates(concave_path) -> list[tuple[int,int]]:
         case [(3,)]:
             output_path.extend(lc_path)
             output_path.extend(rc_path) 
-            output_path.extend(LANDMARK_NOSE)
+            output_path.extend(nose_path)
         
         # Both eyes
         case [(4,)]:

@@ -1,9 +1,6 @@
 import cv2 as cv
 import numpy as np
 import matplotlib.cm as cm
-import numbers
-
-
 
 def draw_legend(frame, vmin:float = 0.0, vmax:float = 1.0, legend_position:str = "top-left"):
     h, w, _ = frame.shape
@@ -65,4 +62,21 @@ def draw_legend(frame, vmin:float = 0.0, vmax:float = 1.0, legend_position:str =
         # label 
         cv.putText(frame, f"{val:.1f}", (x + bar_width + int(30 * scale), ty + int(5 * scale)), font, tick_font_scale, (0, 0, 0), thickness, cv.LINE_AA)
 
-    return frame
+def draw_scaled_flow_arrows(frame, origin_point, flow_vector, colour, arrow_length:int = 10, line_thickness:int = 1):
+
+    x, y = origin_point
+    dx, dy = flow_vector
+
+    magnitude = np.sqrt(dx**2 + dy**2)
+
+    if magnitude > 1e-3:    # Avoid divide by zero errors 
+        dx /= magnitude
+        dy /= magnitude
+    else:
+        dx, dy = 0, 0
+    
+    # Scale end_pt to constant arrow length
+    end_point = (int(x + dx * arrow_length), int(y + dy * arrow_length))
+
+    # Draw the arrows 
+    cv.arrowedLine(frame, (int(x), int(y)), end_point, colour, line_thickness, tipLength=0.3)

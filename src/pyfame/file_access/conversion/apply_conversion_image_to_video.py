@@ -178,9 +178,9 @@ def standardise_image_dimensions(input_directory:str, method:int|str = STANDARDI
 
 def apply_conversion_image_to_video(file_paths:pd.DataFrame, output_filename:str, frame_rate:int = 30, repeat_duration_msec:int = 1000, 
                                     blend_transition:bool = True, blended_frames_proportion:float = 0.2) -> None:
-    """ Takes a series of static images contained in input_dir, and converts them into a video sequence by repeating
-    and interpolating frames. Output "movie" files will be written to output_dir. The output video file will have the images
-    written in the order they appear within the input directory.
+    """ Takes a series of static images contained in file_paths, and converts them into a video sequence by repeating
+    and interpolating frames. Output "movie" files will be written to output_dir. The output video file will have frames
+    written in the order they appear within the file_paths.
 
     Parameters:
     -----------

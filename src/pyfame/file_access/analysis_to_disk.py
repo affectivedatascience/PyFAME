@@ -5,7 +5,8 @@ from datetime import datetime
 from pyfame.file_access.checks import *
 from pyfame.file_access.file_access_directories import create_output_directory
 
-def analysis_to_disk(analysis_dictionary:dict[str, pd.DataFrame], analysis_label:str, working_directory_path:str=os.path.join(os.getcwd(), "data")) -> None:
+def analysis_to_disk(analysis_dictionary:dict[str, pd.DataFrame], analysis_label:str, working_directory_path:str = os.path.join(os.getcwd(), "data"),
+                     output_folder_name:str | None = None) -> None:
 
     if not os.path.isdir(working_directory_path):
         raise OSError(
@@ -16,8 +17,9 @@ def analysis_to_disk(analysis_dictionary:dict[str, pd.DataFrame], analysis_label
     # Get a unique folder identifier for this analysis session
     output_root = os.path.join(working_directory_path, "analysis")
     timestamp = datetime.now().isoformat(timespec='seconds')
-    folder_name = timestamp.replace(":","-")
-    folder_path = create_output_directory(output_root, folder_name)
+    if not output_folder_name:
+        output_folder_name = timestamp.replace(":","-")
+    folder_path = create_output_directory(output_root, output_folder_name)
 
     for filename, df in analysis_dictionary.items():
 

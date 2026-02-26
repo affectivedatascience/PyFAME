@@ -1,10 +1,7 @@
 from .layer import Layer
 from cv2.typing import MatLike
-from pyfame.layer.manipulations.stylise.layer_stylise_optical_flow_dense import LayerStyliseOpticalFlowDense
-from pyfame.layer.manipulations.stylise.layer_stylise_optical_flow_sparse import LayerStyliseOpticalFlowSparse
 from pyfame.layer.manipulations.colour.layer_colour_recolour import LayerColourRecolour
 from pyfame.layer.manipulations.overlay.layer_overlay import LayerOverlay
-
 
 class LayerPipeline:
     def __init__(self):
@@ -39,20 +36,10 @@ class LayerPipeline:
     
     def apply_layers(self, landmarker_coordinates:list[tuple[int,int]], frame:MatLike, dt:float, **kwargs) -> MatLike:
         self.layers = self.enforce_layer_ordering()
-
-        file_path = kwargs.get("file_path", None)
         blendshapes = kwargs.get("blendshapes", None)
 
         for layer in self.layers:
-            # Optical flow layers require the file path if a precomputed colour scale is specified
-            if isinstance(layer, (LayerStyliseOpticalFlowDense, LayerStyliseOpticalFlowSparse)):
-                frame = layer.apply_layer(
-                    landmarker_coordinates = landmarker_coordinates, 
-                    frame = frame, 
-                    dt=dt, 
-                    file_path = file_path
-                )
-            elif isinstance(layer, (LayerColourRecolour, LayerOverlay)):
+            if isinstance(layer, (LayerColourRecolour, LayerOverlay)):
                 frame = layer.apply_layer(
                     landmarker_coordinates = landmarker_coordinates,
                     frame = frame, 
@@ -63,6 +50,6 @@ class LayerPipeline:
                 frame = layer.apply_layer(
                     landmarker_coordinates = landmarker_coordinates, 
                     frame = frame, 
-                    dt = dt,
+                    dt = dt
                 )
         return frame
