@@ -1,12 +1,31 @@
-from pyfame.utilities.constants import *
+from pyfame.utils.constants import *
 from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
 from pyfame.landmark.facial_landmarks import *
-from pyfame.utilities.exceptions import *
+from pyfame.utils.exceptions import *
 import cv2 as cv
 import numpy as np
 
 def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[int,int]]] | list[tuple[int,int]], landmarker_coordinates) -> cv.typing.MatLike:
-    
+    """ Given a landmark path, create a binary image mask based
+    on the input image or frame.
+
+    Parameters
+    ----------
+    frame : MatLike
+        A static image or decoded video frame used to create the binary image mask.
+    landmark_paths : array_like
+        A predefined single landmark path, or a list of landmark paths specifying
+        the masked region in the frame.
+    landmarker_coordinates : array_like
+        A list of screen pixel coordinates returned by the mediapipe 
+        FaceLandmarker task.
+
+    Returns
+    -------
+    mask : MatLike
+        A binary image with everything masked out except for the regions
+        enclosed by landmark_paths.
+    """
     masked_frame = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
 
     # Extracting all of the relevant landmark pixel coordinates
@@ -335,3 +354,5 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                 masked_frame[bool_mask] = 255
 
     return masked_frame.astype(np.uint8)
+
+__all__ = [mask_from_landmarks]

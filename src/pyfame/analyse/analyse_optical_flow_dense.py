@@ -1,10 +1,10 @@
 from pydantic import BaseModel, ValidationError, field_validator, ValidationInfo, PositiveInt, NonNegativeInt, PositiveFloat, NonNegativeFloat
 from pyfame.landmark.facial_landmarks import *
 from pyfame.file_access import get_video_capture, get_video_writer
-from pyfame.utilities.exceptions import *
-from pyfame.utilities.constants import *
+from pyfame.utils.exceptions import *
+from pyfame.utils.constants import *
 from pyfame.file_access.file_access_directories import create_output_directory
-from pyfame.analyse.optical_flow_utils import draw_legend
+from pyfame.analyse._optical_flow_utils import draw_legend
 from pyfame.analyse.analyse_optical_flow_sparse import precompute_colour_scale
 import matplotlib.cm as cm
 import matplotlib.colors as mpcolors
@@ -43,35 +43,39 @@ class DenseFlowAnalysisParameters(BaseModel):
     
 def analyse_optical_flow_dense(file_paths:pd.DataFrame, frame_step:int = 5, output_visualization:bool = False, precise_colour_scale:bool = False,
                                display_legend:bool = True, legend_position:str = "top-left") -> tuple[dict[str, pd.DataFrame], str | None]:
-    '''Takes an input video file, and computes the dense optical flow, outputting the aggregate vector magnitudes to a csv file. 
-    Optionally, output a visualization of the dense optical flow into the same folder as the csv files, under /visualization.
+    '''Takes an input video file, and computes the dense optical flow, outputting the 
+    aggregate vector magnitudes to a csv file. Optionally, output a visualization of 
+    the dense optical flow into the same folder as the csv files, under /visualization.
     Dense optical flow uses Farneback's algorithm to track every point within a frame.
 
     Parameters
     ----------
 
-    file_paths: pandas.DataFrame
-        An Nx2 dataframe of absolute and relative file paths, returned by the make_paths() function.
+    file_paths : pandas.DataFrame
+        An Nx2 dataframe of absolute and relative file paths, returned by 
+        the make_paths() function.
     
-    frame_step: int
-        The number of frames between successive optical flow calculations. The flow values will be more 
-        consistent and robust as you increase this parameter, but computation time will increase
-        proportionally.
+    frame_step : int
+        The number of frames between successive optical flow calculations. 
+        The flow values will be more consistent and robust as you increase 
+        this parameter, but computation time will increase proportionally.
 
-    output_visualization: bool
+    output_visualization : bool
         A boolean flag indicating whether to output a visualization video.
     
-    precise_colour_scale: bool
-        A boolean flag indicating whether to do an initial precompute pass using sparse optical 
-        flow to get a rough estimate of the vector magnitude ranges for the visualizations 
-        colour scale. 
+    precise_colour_scale : bool
+        A boolean flag indicating whether to do an initial precompute pass 
+        using sparse optical flow to get a rough estimate of the vector 
+        magnitude ranges for the visualizations colour scale. 
     
-    display_legend: bool
-        A boolean flag indicating whether to display a legend in the visualization.
+    display_legend : bool
+        A boolean flag indicating whether to display a legend in the 
+        visualization.
 
-    legend_position: str
-        A string indicating where in the visualization output the legend should be placed. 
-        One of ["top-left", "top-right", "bottom-left", "bottom-right"].
+    legend_position : str
+        A string indicating where in the visualization output the legend 
+        should be placed. One of ["top-left", "top-right", "bottom-left",
+        "bottom-right"].
     
     Returns
     -------
@@ -81,10 +85,10 @@ def analyse_optical_flow_dense(file_paths:pd.DataFrame, frame_step:int = 5, outp
     Raises
     ------
 
-    ValidationError:
+    ValidationError
         Thrown by the pydantic model when invalid parameters are passed to the method.
     
-    FileReadError:
+    FileReadError
         When the working directory path; or any of its required sub-paths cannot be located. 
 
     UnrecognizedExtensionError
@@ -321,3 +325,5 @@ def analyse_optical_flow_dense(file_paths:pd.DataFrame, frame_step:int = 5, outp
         return (outputs, folder_name)
     else:
         return (outputs, None)
+    
+__all__ = ["analyse_optical_flow_dense"]

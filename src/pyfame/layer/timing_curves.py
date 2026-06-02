@@ -4,26 +4,28 @@ import numpy as np
 def timing_constant(time_delta:float, time_start:float, time_end:float, positive_slope:bool, **kwargs) -> float:
     """ Constant timing function. Always returns 1.0, regardless of input.
     
-    Parameters 
+    Parameters
     ----------
 
-    time_delta: float
-        The current timestamp (msec) of the video file being evaluated.
+    time_delta : float
+        The current timestamp (msec) of the video file being 
+        evaluated.
 
-    time_start: float
+    time_start : float
         The time at which the function begins to rise or fall.
     
-    time_end: float
-        The time at which the function stops transitioning once it has reached its maximum 
-        or minimum weight.
+    time_end : float
+        The time at which the function stops transitioning once 
+        it has reached its maximum or minimum weight.
     
-    positive_slope: bool
-        A boolean flag indicating whether the slope of the function is rising or falling.
+    positive_slope : bool
+        A boolean flag indicating whether the slope of the 
+        function is rising or falling.
     
     returns
     -------
 
-    weight: float
+    weight : float
         A normalised weight in the range [0.0, 1.0].
     """
 
@@ -35,26 +37,28 @@ def timing_constant(time_delta:float, time_start:float, time_end:float, positive
 def timing_linear(time_delta:float, time_start:float, time_end:float, positive_slope:bool, **kwargs) -> float:
     """ Normalised linear timing function.
 
-    Parameters 
+    Parameters
     ----------
 
-    time_delta: float
-        The current timestamp (msec) of the video file being evaluated.
+    time_delta : float
+        The current timestamp (msec) of the video file being 
+        evaluated.
 
-    time_start: float
+    time_start : float
         The time at which the function begins to rise or fall.
     
-    time_end: float
-        The time at which the function stops transitioning once it has reached its maximum 
-        or minimum weight.
+    time_end : float
+        The time at which the function stops transitioning once 
+        it has reached its maximum or minimum weight.
     
-    positive_slope: bool
-        A boolean flag indicating whether the slope of the function is rising or falling.
+    positive_slope : bool
+        A boolean flag indicating whether the slope of the 
+        function is rising or falling.
     
     returns
     -------
 
-    weight: float
+    weight : float
         A normalised weight in the range [0.0, 1.0].
     """
     
@@ -71,33 +75,40 @@ def timing_linear(time_delta:float, time_start:float, time_end:float, positive_s
         return 0.0
 
 def timing_sigmoid(time_delta:float, time_start:float, time_end:float, positive_slope:bool, **kwargs) -> float:
-    """ Returns the value of the sigmoid function evaluated at time t. If paramater k (growth_rate) is 
-    not provided in kwargs, it will be set to 10.
+    """ Returns the value of the sigmoid function evaluated at time t. 
+    If paramater k (growth_rate) is not provided in kwargs, it will be 
+    set to 10.
     
-    Parameters 
+    Parameters
     ----------
 
-    time_delta: float
-        The current timestamp (msec) of the video file being evaluated. 
+    time_delta : float
+        The current timestamp (msec) of the video file being 
+        evaluated. 
     
-    time_start: float
+    time_start : float
         The time at which the function begins to rise or fall.
     
-    time_end: float
-        The time at which the function stops transitioning once it has reached its maximum 
-        or minimum weight.
+    time_end : float
+        The time at which the function stops transitioning once 
+        it has reached its maximum or minimum weight.
     
-    positive_slope: bool
-        A boolean flag indicating whether the slope of the function is rising or falling.
+    positive_slope : bool
+        A boolean flag indicating whether the slope of the 
+        function is rising or falling.
     
-    growth_rate: float
-        The slope or growth rate parameter, controls how quickly the sigmoid function transitions
-        from zero to one. 
+    Other Parameters
+    ----------------
+
+    growth_rate : float
+        The slope or growth rate parameter, controls how quickly 
+        the sigmoid function transitions from zero to one. Can
+        also be passed as ``k``.
     
     returns
     -------
 
-    weight: float
+    weight : float
         A normalised weight in the range [0.0, 1.0].
     """
 
@@ -129,29 +140,35 @@ def timing_sigmoid(time_delta:float, time_start:float, time_end:float, positive_
 def timing_gaussian(time_delta:float, time_start:float, time_end:float, positive_slope:bool, **kwargs) -> float:
     """ Normalized gaussian timing function
 
-    Parameters 
+    Parameters
     ----------
 
-    time_delta: float
-        The current timestamp (msec) of the video file being evaluated. 
+    time_delta : float
+        The current timestamp (msec) of the video file being 
+        evaluated. 
     
-    time_start: float
+    time_start : float
         The time at which the function begins to rise or fall.
     
-    time_end: float
-        The time at which the function stops transitioning once it has reached its maximum 
-        or minimum weight.
+    time_end : float
+        The time at which the function stops transitioning once 
+        it has reached its maximum or minimum weight.
     
-    positive_slope: bool
-        A boolean flag indicating whether the slope of the function is rising or falling.
-  
-    variance (sigma): float
+    positive_slope : bool
+        A boolean flag indicating whether the slope of the 
+        function is rising or falling.
+    
+    Other Parameters
+    ----------------
+
+    variance : float
         Controls the steepness of the curve's transition.
+        Can also be passed as ``sigma``.
     
     returns
     -------
 
-    weight: float
+    weight : float
         A normalised weight in the range [0.0, 1.0].
     """
     def half_gaussian(x, sigma, positive):
@@ -183,3 +200,5 @@ def timing_gaussian(time_delta:float, time_start:float, time_end:float, positive
         return half_gaussian(cur_eval, sigma, positive_slope)
     else:
         return 0.0
+
+__all__ = ["timing_constant", "timing_linear", "timing_sigmoid", "timing_gaussian"]

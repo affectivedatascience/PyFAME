@@ -1,14 +1,13 @@
 from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo, PositiveFloat, PositiveInt
 from typing import Union
-from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_pixel_coordinates, get_pixel_coordinates_from_landmark
+from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_pixel_coordinates
 from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.file_access import get_video_capture, create_output_directory
-from pyfame.utilities.exceptions import *
-from pyfame.utilities.constants import *
+from pyfame.utils.exceptions import *
+from pyfame.utils.constants import *
 import os
 import cv2 as cv
-import numpy as np
 import pandas as pd
 
 class ColourMeansParameters(BaseModel):
@@ -61,28 +60,28 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
     Parameters
     ----------
 
-    file_paths: Dataframe
+    file_paths : pandas.Dataframe
         A 2-column dataframe consisting of absolute and relative file paths.
     
-    colour_space: int, str
+    colour_space : int, str
         A specifier for which color space to operate in. One of COLOR_SPACE_RGB, COLOR_SPACE_HSV or COLOR_SPACE_GRAYSCALE
     
-    min_face_detection_confidence: float
+    min_face_detection_confidence : float
         A confidence parameter passed to the mediapipe FaceLandmarker instance.
         Controls how confident the detection model needs to be to confirm a face is present in the frame.
     
-    min_face_presence_confidence: float
+    min_face_presence_confidence : float
         A confidence parameter passed to the mediapipe FaceLandmarker instance.
         Controls how confident the landmarker needs to be that the detected face is still present, 
         if not it will attempt to re-detect the face.
     
-    min_tracking_confidence: float
+    min_tracking_confidence : float
         A confidence parameter passed to the mediapipe FaceLandmarker instance. 
         Controls how confident the facial tracking model needs to be for the landmarker to 
         continue using the current mesh layout. If this parameter fails, the landmarker will
         transition back to facial detection.
     
-    frame_step: int
+    frame_step : int
         The number of frames between successive colour sampling. 
     
         
@@ -94,10 +93,10 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
     Raises
     ------
 
-    ValidationError:
+    ValidationError
         Thrown by the pydantic model when invalid parameters are passed to the method.
     
-    FileReadError:
+    FileReadError
         When the working directory path; or any of its required sub-paths cannot be located. 
     
     UnrecognizedExtensionError
@@ -349,4 +348,7 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
 
             outputs.update({f"{file}":output_df})
 
-    return outputs    
+    return outputs
+
+# Defining __all__ for griffe 
+__all__ = ["analyse_facial_colour_means"]

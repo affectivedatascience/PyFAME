@@ -1,5 +1,5 @@
 import pytest
-from pyfame.utilities.exceptions import *
+from pyfame.utils.exceptions import *
 from pyfame.manipulation.temporal.apply_temporal_frame_shuffle import apply_frame_shuffle
 
 def test_exception_handling():

@@ -76,3 +76,5 @@ def map_directory_structure(input_directory:str, output_directory:str) -> None:
     if dir_names is not None:
         for dir in dir_names:
             create_output_directory(output_directory, dir)
+
+__all__ = ["contains_sub_directories", "create_output_directory", "map_directory_structure"]

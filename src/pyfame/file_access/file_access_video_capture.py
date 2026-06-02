@@ -1,6 +1,6 @@
 import cv2 as cv
 import os
-from pyfame.utilities.exceptions import *
+from pyfame.utils.exceptions import *
 from pyfame.file_access.checks import *
 
 def get_video_capture(file_path:str) -> cv.VideoCapture:
@@ -21,3 +21,5 @@ def get_video_capture(file_path:str) -> cv.VideoCapture:
                            f" over file {file_path}.")
     else:
         return vc
+
+__all__ = ["get_video_capture"]

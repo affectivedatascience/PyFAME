@@ -6,7 +6,7 @@ from importlib.resources import files
 import jsonschema
 from jsonschema import ValidationError
 from pyfame.layer.layer import Layer
-from pyfame.utilities.general_utilities import get_landmark_names
+from pyfame.utils.general_utilities import get_landmark_names
 
 def make_json_serializable(obj):
     """
@@ -89,3 +89,5 @@ def write_experiment_log(layers:list[Layer], working_directory_path:str) -> None
 
         with open(filename, "w") as f:
             json.dump(log_data, f, indent=2)
+
+__all__ = ["write_experiment_log"]

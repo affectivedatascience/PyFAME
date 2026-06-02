@@ -1,11 +1,12 @@
-from pyfame.file_access import get_video_capture, get_video_writer
-from pyfame.utilities.exceptions import FileReadError
+from pyfame.file_access.file_access_directories import create_output_directory
+from pyfame.utils.exceptions import FileReadError
 import os
 import pandas as pd
+import av
 
-def apply_conversion_video_to_mp4(file_paths:pd.DataFrame) -> None:
-    """ Given an input directory containing one or more video files, transcodes all video files from their current
-    container to mp4.
+def apply_conversion_remux_to_mp4(file_paths:pd.DataFrame) -> None:
+    """ Given an input directory containing one or more video files, remuxes all video files from their current
+    container to mp4 video.
 
     Parameters
     ----------
@@ -27,9 +28,13 @@ def apply_conversion_video_to_mp4(file_paths:pd.DataFrame) -> None:
     """
 
     # Extracting the i/o paths from the file_paths dataframe
+    # Extracting the i/o paths from the file_paths dataframe
+    if len(file_paths["Absolute Path"]) == 0:
+        raise FileReadError(message="File_paths dataframe is empty, please inspect your working folder to ensure you have populated the raw/ directory.")
+    
     absolute_paths = file_paths["Absolute Path"]
 
-    norm_path = os.path.normpath(absolute_paths[0])
+    norm_path = os.path.normpath(absolute_paths.iloc[0])
     norm_cwd = os.path.normpath(os.getcwd())
     rel_dir_path, *_ = os.path.split(os.path.relpath(norm_path, norm_cwd))
     parts = rel_dir_path.split(os.sep)
@@ -50,21 +55,27 @@ def apply_conversion_video_to_mp4(file_paths:pd.DataFrame) -> None:
     if not os.path.isdir(os.path.join(test_path, "processed")):
         raise FileReadError(message=f"Unable to locate the 'processed' subdirectory under root directory '{root_directory}'. Please call make_output_paths() to set up the correct directory structure.")
     
-    output_directory = os.path.join(test_path, "processed")
+    output_directory = create_output_directory(os.path.join(test_path, "processed"), "remuxed")
 
     for file in absolute_paths:
-        # Initialize capture and writer objects
-        filename, extension = os.path.splitext(os.path.basename(file))
-        capture = get_video_capture(file)
-        size = (int(capture.get(3)), int(capture.get(4)))
-        result = get_video_writer(file_path=os.path.join(output_directory, f"{filename}_transcoded.mp4"), frame_size=size)
+    
+        filename, _ = os.path.splitext(os.path.basename(file))
+        input_vid = av.open(file)
+        output_vid = av.open(os.path.join(output_directory, f"{filename}.mp4"), 'w')
+
+        # Initialise stream objects
+        in_stream = input_vid.streams.video[0]
+        out_stream = output_vid.add_stream_from_template(in_stream)
+
+        for packet in input_vid.demux(in_stream):
+            # Skip flushing packets
+            if packet.dts is None:
+                continue
+
+            packet.stream = out_stream
+            output_vid.mux(packet)
         
-        while True:
-            success, frame = capture.read()
-            if not success:
-                break
+        input_vid.close()
+        output_vid.close()
 
-            result.write(frame)
-
-        capture.release()
-        result.release()
+__all__ = ["apply_conversion_remux_to_mp4"]

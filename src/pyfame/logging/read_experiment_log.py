@@ -4,12 +4,46 @@ import jsonschema
 from jsonschema import ValidationError
 from importlib.resources import files
 from pyfame.layer.layer import Layer, TimingConfiguration
-from pyfame.layer.manipulations import *
+from pyfame.layer.manipulations.colour import (layer_colour_recolour, layer_colour_brightness, layer_colour_saturation)
+from pyfame.layer.manipulations.mask import layer_mask
+from pyfame.layer.manipulations.occlusion import (layer_occlusion_bar, layer_occlusion_landmark, layer_occlusion_blur, layer_occlusion_noise)
+from pyfame.layer.manipulations.overlay import layer_overlay
+from pyfame.layer.manipulations.spatial import (layer_spatial_grid_shuffle, layer_spatial_landmark_relocate)
+from pyfame.layer.manipulations.stylise import (layer_stylise_point_light, layer_stylise_pencil_sketch)
 import pyfame.layer.timing_curves as t_curves
-import pyfame.utilities.constants as const
+import pyfame.utils.constants as const
 import pyfame.landmark.facial_landmarks as landmark
 
 def read_experiment_log(log_file_path:str) -> list[Layer]:
+    """
+    Given a log file path, attempt to extract and recreate the manipulation layers
+    applied in the original manipulation run.
+
+    Parameters
+    ----------
+    log_file_path: str
+        A path string to the log file containing manipulation info 
+        to be replicated.
+
+    Raises
+    ------
+    ValueError
+        When provided an invalid file path, or the path points
+        to a non json logfile.
+    IsADirectoryError
+        When the provided path exists, but points to a dir
+        rather than a file. 
+
+    Notes
+    -----
+    - This function may not perform as expected if the new input video is
+    a different length or frame rate than the files used in the original run. 
+    This function is intended to speed up the reproduction of manipulations 
+    over large (typically standardised datasets). 
+    - As the timing configuration is irrelevant to static images, this 
+    function will always work as expected for static image manipulation 
+    reproduction.
+    """
     if not os.path.exists(log_file_path):
         raise ValueError("Invalid log file path provided, log file Cannot be read.")
     if not os.path.isfile(log_file_path):
@@ -34,9 +68,8 @@ def read_experiment_log(log_file_path:str) -> list[Layer]:
         "LayerSpatialGridShuffle":layer_spatial_grid_shuffle,
         "LayerSpatialLandmarkRelocate":layer_spatial_landmark_relocate,
         "LayerStylisePointLight":layer_stylise_point_light,
-        "LayerOverlay":layer_overlay,
-        "LayerStyliseOpticalFlowDense":layer_stylise_optical_flow_dense,
-        "LayerStyliseOpticalFlowSparse":layer_stylise_optical_flow_sparse
+        "LayerStylisePencilSketch":layer_stylise_pencil_sketch,
+        "LayerOverlay":layer_overlay
     }
     
     # Read in the json
@@ -91,3 +124,5 @@ def read_experiment_log(log_file_path:str) -> list[Layer]:
         layers_return.append(layer_instance)
     
     return layers_return
+
+__all__ = ["read_experiment_log"]

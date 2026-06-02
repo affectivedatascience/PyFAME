@@ -3,12 +3,52 @@ from typing import Union, List, Tuple, Optional
 from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
-from pyfame.utilities.constants import *
+from pyfame.utils.constants import *
 import cv2 as cv
 import numpy as np
 from skimage.util import *
 
 class NoiseParameters(BaseModel):
+    """
+    Configuration model defining the control parameters for applying
+    a noise-based occlusion to a frame or image.
+
+    This class inherits from pydantic's `BaseModel` to provide validation
+    and default handling of noise occlusion parameters.
+
+    Attributes
+    ----------
+    random_seed : int or None
+        An optional seed for the random number generator, enabling
+        reproducible noise patterns across runs. If ``None``, the
+        generator is seeded non-deterministically.
+    noise_method : str or int
+        The noise algorithm to apply. Accepted string values are
+        ``"pixelate"``, ``"salt and pepper"``, and ``"gaussian"``.
+        Accepted integer values are ``18`` (pixelate), ``19``
+        (salt and pepper), and ``20`` (gaussian). Integer inputs are
+        normalised to their string equivalents on validation.
+    noise_probability : float
+        The probability that any given pixel is affected by salt and
+        pepper noise. Must be non-negative. Only used when
+        ``noise_method`` is ``"salt and pepper"``.
+    pixel_size : int
+        The downsampling factor used for pixelation. The frame is
+        downscaled by this factor before being upscaled back to its
+        original dimensions. Must be a positive integer >= 4. Only
+        used when ``noise_method`` is ``"pixelate"``.
+    gaussian_mean : float
+        The mean of the Gaussian noise distribution. Only used when
+        ``noise_method`` is ``"gaussian"``.
+    gaussian_deviation : float
+        The standard deviation of the Gaussian noise distribution.
+        Must be non-negative. Variance is derived as the square of
+        this value. Only used when ``noise_method`` is ``"gaussian"``.
+    landmark_paths : list of list of tuple of int or list of tuple of int
+        A list of one or more closed landmark paths representing the
+        region(s) in which noise will be applied.
+    """
+
     random_seed:Optional[int]
     noise_method:Union[int,str]
     noise_probability:NonNegativeFloat
@@ -21,6 +61,7 @@ class NoiseParameters(BaseModel):
     @classmethod
     def check_compatible_value(cls, value, info:ValidationInfo):
         field_name = info.field_name
+        noise_method_mapping = {18:"pixelate", 19:"salt and pepper", 20:"gaussian"}
 
         if isinstance(value, str):
             value = str.lower(value)
@@ -31,7 +72,7 @@ class NoiseParameters(BaseModel):
         elif isinstance(value, int):
             if value not in {18,19,20}:
                 raise ValueError(f"Unrecognized value for parameter {field_name}.")
-            return value
+            return noise_method_mapping.get(value)
         
         raise TypeError(f"{field_name} provided an invalid type. Must be one of int, str.")
     
@@ -46,8 +87,79 @@ class NoiseParameters(BaseModel):
         return value
 
 class LayerOcclusionNoise(Layer):
-    def __init__(self, timing_configuration:TimingConfiguration, noise_parameters:NoiseParameters):
+    """
+    Manipulation layer that applies a noise-based occlusion within
+    landmark-defined facial regions.
 
+    This layer obscures a region of interest using one of three noise
+    methods: pixelation, salt and pepper noise, or Gaussian noise.
+    Pixelation reduces spatial resolution by downsampling and upsampling
+    the frame, removing fine detail while preserving coarse structure.
+    Salt and pepper noise randomly sets pixels to black or white with a
+    configurable probability. Gaussian noise adds normally distributed
+    intensity perturbations to each pixel, with controllable mean and
+    standard deviation.
+
+    An optional random seed enables reproducible noise patterns across
+    independent runs or frames.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration
+        Timing configuration controlling onset, offset, and rise/fall
+        durations.
+    noise_parameters : NoiseParameters
+        Configuration model specifying the noise method, method-specific
+        parameters, landmark region(s), and optional random seed.
+
+    Attributes
+    ----------
+    time_config : TimingConfiguration
+        Timing configuration used by the layer.
+    noise_params : NoiseParameters
+        Noise-specific configuration parameters.
+    rand_seed : int or None
+        Seed for the random number generator. If ``None``, noise patterns
+        are non-deterministic across runs.
+    noise_method : str
+        The noise algorithm to apply (one of ``"pixelate"``,
+        ``"salt and pepper"``, or ``"gaussian"``).
+    noise_probability : float
+        Per-pixel noise probability used by the salt and pepper method.
+    pixel_size : int
+        Downsampling factor used by the pixelation method.
+    mean : float
+        Mean of the Gaussian noise distribution.
+    standard_deviation : float
+        Standard deviation of the Gaussian noise distribution.
+    landmark_paths : list of list of tuple of int or list of tuple of int
+        Landmark paths defining the region(s) in which noise is applied.
+
+    Notes
+    -----
+    - This layer does not support temporal weighting; noise is applied
+      as a binary on/off effect governed solely by onset and offset times.
+    """
+
+    def __init__(self, timing_configuration:TimingConfiguration, noise_parameters:NoiseParameters):
+        """
+        Initialize a noise occlusion manipulation layer.
+
+        Parameters
+        ----------
+        timing_configuration : TimingConfiguration
+            Timing configuration controlling when the noise effect is
+            applied.
+        noise_parameters : NoiseParameters
+            Parameters defining the noise method, method-specific
+            configuration, target landmark region(s), and optional
+            random seed.
+
+        Notes
+        -----
+        - A snapshot of the initial state is taken after initialization to
+          allow safe resetting between independent applications.
+        """
         self.time_config = timing_configuration
         self.noise_params = noise_parameters
 
@@ -67,9 +179,30 @@ class LayerOcclusionNoise(Layer):
         self._snapshot_state()
     
     def supports_weight(self):
+        """
+        Indicate whether the layer supports temporal weighting.
+
+        Returns
+        -------
+        bool
+            ``False``, as noise occlusion operates as a binary on/off
+            effect and does not support continuous rise/fall weighting.
+        """
         return False
 
     def get_layer_parameters(self) -> dict:
+        """
+        Return the parameters defining this layer.
+
+        This method exposes all configurable parameters required to reproduce
+        the layer's behavior.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping parameter names to their current values,
+            combining both timing and noise occlusion configuration fields.
+        """
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.noise_params.model_dump())
@@ -78,7 +211,30 @@ class LayerOcclusionNoise(Layer):
         return dict(self._layer_parameters)
 
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
-        
+        """
+        Apply the noise occlusion manipulation to a single frame.
+
+        A binary mask is derived from the configured landmark paths to
+        isolate the region of interest. Noise is generated and applied to
+        a copy of the full frame using the configured method, then the
+        noised result is composited over the original frame within the
+        masked region.
+
+        Parameters
+        ----------
+        landmarker_coordinates : list of tuple of int
+            Facial landmark coordinates associated with the current frame.
+        frame : MatLike
+            Input image frame to which the noise occlusion is applied.
+        dt : float
+            Current time (in milliseconds).
+
+        Returns
+        -------
+        MatLike
+            The frame with noise applied within the landmark-defined region
+            and original pixel values preserved outside it.
+        """
         # This layer does not support weight; weight will always be 0.0 or 1.0
         if dt is None:
             weight = 1.0
@@ -101,7 +257,7 @@ class LayerOcclusionNoise(Layer):
             output_frame = frame.copy()
 
             match self.noise_method:
-                case "pixelate" | 18:
+                case "pixelate":
                     height, width = frame.shape[:2]
                     h = frame.shape[0]//self.pixel_size
                     w = frame.shape[1]//self.pixel_size
@@ -112,7 +268,7 @@ class LayerOcclusionNoise(Layer):
 
                     output_frame = np.where(mask == 255, output_frame, frame)
                 
-                case "salt and pepper" | 19:
+                case "salt and pepper":
                     # Divide prob in 2 for "salt" and "pepper"
                     thresh = self.noise_probability
                     noise_prob = self.noise_probability/2
@@ -130,7 +286,7 @@ class LayerOcclusionNoise(Layer):
 
                     output_frame = np.where(mask == 255, output_frame, frame)
                 
-                case "gaussian" | 20:
+                case "gaussian":
                     var = self.standard_deviation**2
 
                     # scikit-image's random_noise function works with floating point images; we need to pre-convert our frames to float64
@@ -144,7 +300,56 @@ class LayerOcclusionNoise(Layer):
 
 def layer_occlusion_noise(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, noise_method:int|str = "gaussian", 
                           noise_probability:float = 0.5, pixel_size:int = 32, mean:float = 0.0, standard_deviation:float = 0.5, random_seed:int|None = None) -> LayerOcclusionNoise:
-    
+    """
+    Factory function for the noise occlusion manipulation layer.
+    `LayerOcclusionNoise` obscures one or more landmark-defined facial
+    regions using one of three noise methods: pixelation, salt and pepper,
+    or Gaussian noise. An optional random seed enables reproducible noise
+    patterns across independent runs.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration or None, optional
+        A pydantic model containing timing configurations controlling onset
+        and offset. If ``None``, a default ``TimingConfiguration`` is
+        instantiated. The default instantiation assumes onset at 0.0 and
+        offset at the video's duration.
+    landmark_paths : list of list of tuple of int or list of tuple of int, default=LANDMARK_FACE_OVAL
+        A list of one or more closed landmark paths representing the
+        region(s) in which noise will be applied.
+    noise_method : str or int, default="gaussian"
+        The noise algorithm to apply. Accepted string values are
+        ``"pixelate"``, ``"salt and pepper"``, and ``"gaussian"``.
+        Accepted integer values are ``18`` (pixelate), ``19``
+        (salt and pepper), and ``20`` (gaussian).
+    noise_probability : float, default=0.5
+        The per-pixel noise probability used by the salt and pepper method.
+        Must be non-negative. Ignored by other noise methods.
+    pixel_size : int, default=32
+        The downsampling factor used by the pixelation method. Must be a
+        positive integer >= 4. Ignored by other noise methods.
+    mean : float, default=0.0
+        The mean of the Gaussian noise distribution. Ignored by other
+        noise methods.
+    standard_deviation : float, default=0.5
+        The standard deviation of the Gaussian noise distribution. Must be
+        non-negative. Ignored by other noise methods.
+    random_seed : int or None, default=None
+        An optional seed for the random number generator. If provided,
+        noise patterns are reproducible across runs. If ``None``, noise
+        is sampled non-deterministically.
+
+    Returns
+    -------
+    LayerOcclusionNoise
+        An instance of the noise occlusion manipulation layer.
+
+    Raises
+    ------
+    ValueError
+        When provided invalid, out-of-range, or unrecognized parameter values.
+    """
+
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 
@@ -163,3 +368,5 @@ def layer_occlusion_noise(timing_configuration:TimingConfiguration | None = None
         raise ValueError(f"Invalid parameters for {LayerOcclusionNoise.__name__}: {e}")
     
     return LayerOcclusionNoise(time_config, params)
+
+__all__ = ["layer_occlusion_noise", "NoiseParameters"]

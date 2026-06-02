@@ -3,8 +3,8 @@ from typing import Union, List, Tuple, Any
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.landmark.facial_landmarks import *
-from pyfame.utilities.constants import *
-from pyfame.utilities.general_utilities import get_landmark_names
+from pyfame.utils.constants import *
+from pyfame.utils.general_utilities import get_landmark_names
 from pyfame.landmark.blendshape_smoother import EyeBlendshapeSmoother
 import cv2 as cv
 import numpy as np
@@ -162,8 +162,7 @@ class LayerColourRecolour(Layer):
         Return the parameters defining this layer.
 
         This method should expose all configurable parameters required
-        to reproduce the layer's behavior (excluding timing parameters,
-        which are handled separately).
+        to reproduce the layer's behavior.
 
         Returns
         -------
@@ -300,7 +299,7 @@ class LayerColourRecolour(Layer):
         right_sclera_mask = cv.bitwise_xor(re_mask, ri_mask)
         
         # Convert input image to CIE La*b* color space (perceptually uniform space)
-        img_LAB = cv.cvtColor(frame, cv.COLOR_BGR2LAB).astype(np.float32)
+        img_LAB = cv.cvtColor(frame.astype(np.float32) / 255.0, cv.COLOR_BGR2LAB)
         # Split the image into individual channels for precise colour manipulation
         l,a,b = cv.split(img_LAB)
 
@@ -315,7 +314,7 @@ class LayerColourRecolour(Layer):
                 if self.colour_right_sclera and right_eye_open:
                     a = np.where(right_sclera_mask==255, a + (weight * self.magnitude), a)
 
-                np.clip(a, -128, 127)
+                a = np.clip(a, -128, 127)
 
             case "blue" | 5:
                 delta = 128.0 * ((weight * self.magnitude)/100.0)
@@ -326,7 +325,7 @@ class LayerColourRecolour(Layer):
                 if self.colour_right_sclera and right_eye_open:
                     b = np.where(right_sclera_mask==255, b - (weight * self.magnitude), b)
 
-                np.clip(b, -128, 127)
+                b = np.clip(b, -128, 127)
 
             case "green" | 6:
                 delta = 128.0 * ((weight * self.magnitude)/100.0)
@@ -337,7 +336,7 @@ class LayerColourRecolour(Layer):
                 if self.colour_right_sclera and right_eye_open:
                     a = np.where(right_sclera_mask==255, a - (weight * self.magnitude), a)
 
-                np.clip(a, -128, 127)
+                a = np.clip(a, -128, 127)
 
             case "yellow" | 7:
                 delta = 127.0 * ((weight * self.magnitude)/100.0)
@@ -348,7 +347,7 @@ class LayerColourRecolour(Layer):
                 if self.colour_right_sclera and right_eye_open:
                     b = np.where(right_sclera_mask==255, b + (weight * self.magnitude), b)
 
-                np.clip(b, -128, 127)
+                b = np.clip(b, -128, 127)
 
             case _:
                 raise ValueError("Unidentified or incompatible focus colour passed to LayerColourRecolour.")
@@ -357,7 +356,9 @@ class LayerColourRecolour(Layer):
         img_LAB = cv.merge([l,a,b])
 
         # Convert CIE La*b* back to BGR
-        result = cv.cvtColor(img_LAB.astype(np.uint8), cv.COLOR_LAB2BGR)
+        result = cv.cvtColor(img_LAB, cv.COLOR_LAB2BGR)
+        result = (result * 255.0).astype(np.uint8)
+
         return result
 
 def layer_colour_recolour(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, focus_colour:str|int = "red", magnitude:float = 10.0) -> LayerColourRecolour:
@@ -414,3 +415,5 @@ def layer_colour_recolour(timing_configuration:TimingConfiguration | None = None
         raise ValueError(f"Invalid parameters for {LayerColourRecolour.__name__}: {e}")
     
     return LayerColourRecolour(config, params)
+
+__all__ = ["RecolourParameters", "layer_colour_recolour"]

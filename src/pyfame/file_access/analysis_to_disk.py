@@ -42,3 +42,5 @@ def analysis_to_disk(analysis_dictionary:dict[str, pd.DataFrame], analysis_label
         # Serialize to Json
         with open(file_path, "w") as f:
             json.dump(output_dict, f, indent=2)
+
+__all__ = ["analysis_to_disk"]

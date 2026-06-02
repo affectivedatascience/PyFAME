@@ -1,5 +1,5 @@
 from pyfame.file_access import get_video_capture, get_video_writer, get_imread, map_directory_structure, create_output_directory
-from pyfame.utilities.exceptions import *
+from pyfame.utils.exceptions import *
 from pyfame.layer.timing_curves import *
 from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.layer import Layer
@@ -39,22 +39,17 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
 
     Parameters
     ----------
-
     file_paths: pandas.DataFrame
-        A table of path strings returned by 
-    
+        A dataframe of path strings returned by make_paths().
     layers: list of Layer
         A list of Layer objects containing the specified layer and its parameters.
-    
     min_face_detection_confidence: float
         A confidence parameter passed to the mediapipe FaceLandmarker instance.
         Controls how confident the detection model needs to be to confirm a face is present in the frame.
-    
     min_face_presence_confidence: float
         A confidence parameter passed to the mediapipe FaceLandmarker instance.
         Controls how confident the landmarker needs to be that the detected face is still present, 
         if not it will attempt to re-detect the face.
-    
     min_tracking_confidence: float
         A confidence parameter passed to the mediapipe FaceLandmarker instance. 
         Controls how confident the facial tracking model needs to be for the landmarker to 
@@ -63,22 +58,18 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
     
     Raises
     ------
-
-    TypeError
-
-    ValueError
     
     OSError
-
+        When expected input/output directories do not exist.
     FileReadError
-
+        Given invalid file paths, or an incompatible video/image container.
     FileWriteError
-
+        When an error occurs attempting to write out an image or video frame.
     UnrecognizedExtensionError
+        Given an image or video with an unrecognized container/codec.
     
     Returns
     -------
-
     None
     """
 
@@ -177,12 +168,11 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
         
         if not static_image_mode:
             capture = get_video_capture(file)
-            size = (int(capture.get(3)), int(capture.get(4)))
-            result = get_video_writer(dir_file_path, size, codec)
-
             # Getting the video duration for weight calculations
             frame_count = capture.get(cv.CAP_PROP_FRAME_COUNT)
             fps = capture.get(cv.CAP_PROP_FPS)
+            size = (int(capture.get(3)), int(capture.get(4)))
+            result = get_video_writer(dir_file_path, size, codec, frame_rate=fps)
 
             if fps == 0:
                 raise FileReadError(message="Input video fps is zero. File may be corrupt or incorrectly encoded.")
@@ -264,3 +254,5 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
         for layer in layers:
             # Reset back to initial state after user construction
             layer._reset_state()
+
+__all__ = ["apply_layers", "resolve_timing"]

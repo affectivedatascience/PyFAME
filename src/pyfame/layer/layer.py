@@ -21,12 +21,10 @@ class TimingConfiguration(BaseModel):
     ----------
     onset_time_msec : NonNegativeFloat or None, optional
         Time (in milliseconds) at which the layer begins to activate.
-        If `None`, the onset time will be inferred or handled by the calling
-        context.
+        If `None`, the onset time will be defaulted to the first frame.
     offset_time_msec : float or None, optional
         Time (in milliseconds) at which the layer fully deactivates.
-        If `None`, the offset time will be inferred or handled by the calling
-        context.
+        If `None`, the offset time will be defaulted to the videos duration.
     rise_time_msec : NonNegativeFloat, default=500.0
         Duration (in milliseconds) over which the layer transitions from
         inactive to fully active.
@@ -252,3 +250,5 @@ class Layer(ABC):
             The manipulated frame.
         """
         pass
+
+__all__ = ["TimingConfiguration", "Layer"]

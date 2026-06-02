@@ -1,4 +1,4 @@
-from pyfame.utilities.constants import *
+from pyfame.utils.constants import *
 from pyfame.landmark import facial_landmarks
 from math import atan
 import numpy as np
@@ -56,10 +56,10 @@ def compute_rotation_angle(slope_1:float, slope_2:float = 0.0) -> float:
     Parameters
     ----------
 
-    slope1: float
+    slope_1: float
         The current slope.
 
-    slope2: float
+    slope_2: float
         The initial slope (defaults to 0.0)
 
     returns

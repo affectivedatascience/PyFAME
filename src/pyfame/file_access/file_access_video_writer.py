@@ -1,8 +1,8 @@
 import cv2 as cv
-from pyfame.utilities.exceptions import *
+from pyfame.utils.exceptions import *
 from pyfame.file_access.checks import *
 
-def get_video_writer(file_path:str, frame_size:tuple[int,int], video_codec:str = 'mp4v', frame_rate:int = 30, isColor:bool = True) -> cv.VideoWriter:
+def get_video_writer(file_path:str, frame_size:tuple[int,int], video_codec:str = 'mp4v', frame_rate:float = 30, isColor:bool = True) -> cv.VideoWriter:
     # Perform parameter checks
     check_type(file_path, [str])
     check_valid_path(file_path)
@@ -13,7 +13,7 @@ def get_video_writer(file_path:str, frame_size:tuple[int,int], video_codec:str =
     check_type(video_codec, [str])
     check_value(video_codec, ['mp4v', 'XVID'])
 
-    check_type(frame_rate, [int])
+    check_type(frame_rate, [float])
     check_value(frame_rate, min=1, max=60)
 
     check_type(isColor, [bool])
@@ -26,3 +26,5 @@ def get_video_writer(file_path:str, frame_size:tuple[int,int], video_codec:str =
                             f"cv.VideoWriter() over file {file_path}.")
     else:
         return vw
+    
+__all__ = ["get_video_writer"]

@@ -4,9 +4,9 @@ from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_pi
 from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.file_access import get_video_capture, get_video_writer
-from pyfame.utilities.exceptions import *
-from pyfame.utilities.constants import *
-from pyfame.analyse.optical_flow_utils import draw_legend, draw_scaled_flow_arrows
+from pyfame.utils.exceptions import *
+from pyfame.utils.constants import *
+from pyfame.analyse._optical_flow_utils import draw_legend, draw_scaled_flow_arrows
 from pyfame.file_access.file_access_directories import create_output_directory
 import matplotlib.cm as cm
 import matplotlib.colors as mpcolors
@@ -69,6 +69,26 @@ class SparseFlowAnalysisParameters(BaseModel):
         return value
     
 def precompute_colour_scale(file_path:str, ) -> tuple[float,float,Any]:
+    """ Performs a shallow pass through the input file, using the
+    minimum and maximum sparse optical flow magnitudes to compute 
+    the data range for the visualization colour scale.
+
+    This method is invoked internally by both `analyse_optical_flow_dense`
+    and `analyse_optical_flow_sparse`.
+
+    Parameters
+    ----------
+
+    file_path : str
+        A path string to the video file to be analysed.
+    
+    Returns
+    -------
+
+    scale_values : tuple
+        A tuple containing the min/max optical flow 
+        magnitudes, and the normalization method.
+    """
 
     print("------------------Scale precompute pass--------------------")
     results, _ = analyse_optical_flow_sparse(
@@ -93,47 +113,58 @@ def analyse_optical_flow_sparse(file_paths:pd.DataFrame, landmark_idx_to_track:l
                                 flow_accuracy_threshold:float = 0.03, stats_detail_level:str = "summary", frame_step:int = 5, 
                                 output_visualization:bool = False, display_legend:bool = True, legend_position:str = "top-left",
                                 arrow_thickness:int = 2, precise_colour_scale:bool = False) -> tuple[dict[str, pd.DataFrame], str | None]:
-    
-    """Takes each input video file provided within input_directory, and generates a sparse optical flow image, as well as a csv containing periodically
-    sampled flow vector data. This function makes use of the Lucas-Kanadae optical flow algorithm, as well as the Shi-Tomasi good-corners algorithm to identify
-    and track relevant points in the input video. Alternatively, specific facial landmarks to track can be passed in via landmarks_to_track.
+    """Takes each input video file provided within input_directory, and 
+    generates a sparse optical flow image, as well as a csv containing 
+    periodically sampled flow vector data. This function makes use of 
+    the Lucas-Kanadae optical flow algorithm, as well as the Shi-Tomasi 
+    good-corners algorithm to identify and track relevant points in the 
+    input video. Alternatively, specific facial landmarks to track can 
+    be passed in via landmarks_to_track.
     
     Parameters
     ----------
     
-    file_paths: DataFrame
-        A 2-column dataframe consisting of absolute and relative file paths.
+    file_paths : DataFrame
+        A 2-column dataframe consisting of absolute and relative file 
+        paths.
     
-    landmark_idx_to_track: list of int
-        A list of mediapipe FaceMesh landmark id's, specifying relevant facial landmarks to track.
+    landmark_idx_to_track : list of int
+        A list of mediapipe FaceMesh landmark id's, specifying relevant 
+        facial landmarks to track.
     
-    max_points: int
-        The maximum number of corners or "good points" for the Shi-Tomasi corners algorithm.
+    max_points : int
+        The maximum number of corners or "good points" for the Shi-Tomasi 
+        corners algorithm.
 
-    flow_accuracy_threshold: float
-        A termination criteria for Lucas-Kanadae optical flow; the algorithm will continue to iterate until this threshold is reached.
+    flow_accuracy_threshold : float
+        A termination criteria for Lucas-Kanadae optical flow; the algorithm 
+        will continue to iterate until this threshold is reached.
 
-    stats_detail_level: str
-        Either "summary" specifying summary statisitics or "full" specifying full descriptive output for each vector.
+    stats_detail_level : str
+        Either "summary" specifying summary statisitics or "full" specifying 
+        full descriptive output for each vector.
     
-    frame_step: int
-        The number of frames between successive optical flow calculations. The flow values will be more consistent 
-        and robust as you increase this parameter. 
+    frame_step : int
+        The number of frames between successive optical flow calculations. 
+        The flow values will be more consistent and robust as you increase 
+        this parameter. 
     
-    output_visualization: bool
+    output_visualization : bool
         A boolean flag indicating whether to output a visualization video.
     
-    display_legend: bool
-        A boolean flag indicating whether to display a legend in the visualization.
+    display_legend : bool
+        A boolean flag indicating whether to display a legend in the 
+        visualization.
 
-    legend_position: str
-        A string indicating where in the visualization output the legend should be placed. 
-        One of ["top-left", "top-right", "bottom-left", "bottom-right"].
+    legend_position : str
+        A string indicating where in the visualization output the legend 
+        should be placed. One of ["top-left", "top-right", "bottom-left",
+        "bottom-right"].
     
-    precise_colour_scale: bool
-        A boolean flag indicating whether to do an initial precompute pass using sparse optical 
-        flow to get a rough estimate of the vector magnitude ranges for the visualizations 
-        colour scale.
+    precise_colour_scale : bool
+        A boolean flag indicating whether to do an initial precompute 
+        pass using sparse optical flow to get a rough estimate of the 
+        vector magnitude ranges for the visualizations colour scale.
     
     Returns
     -------
@@ -143,12 +174,14 @@ def analyse_optical_flow_sparse(file_paths:pd.DataFrame, landmark_idx_to_track:l
     Raises
     ------
 
-    ValueError:
-        Thrown by the pydantic model when invalid parameters are passed to the method.
+    ValueError
+        Thrown by the pydantic model when invalid parameters are passed 
+        to the method.
     
-    FileReadError:
-        When the working directory path; or any of its required sub-paths cannot be located. 
-        Additionally, if any tracking errors are encountered mid analysis.
+    FileReadError
+        When the working directory path; or any of its required sub-paths 
+        cannot be located. Additionally, if any tracking errors are 
+        encountered mid analysis.
 
     """
     
@@ -443,3 +476,5 @@ def analyse_optical_flow_sparse(file_paths:pd.DataFrame, landmark_idx_to_track:l
     
     if output_visualization: return (outputs, folder_name)
     else: return (outputs, None)
+
+__all__ = ["analyse_optical_flow_sparse"]

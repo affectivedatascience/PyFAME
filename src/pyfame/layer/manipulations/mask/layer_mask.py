@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo
 from typing import Union, List, Tuple
-from pyfame.utilities.constants import *
+from pyfame.utils.constants import *
 from pyfame.layer.manipulations.mask.mask_from_landmarks import mask_from_landmarks
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.landmark.facial_landmarks import LANDMARK_FACE_OVAL
@@ -8,6 +8,24 @@ import numpy as np
 import cv2 as cv
 
 class MaskingParameters(BaseModel):
+    """
+    Configuration model defining the control parameters for 
+    masking a frame or image to a landmark-defined region.
+
+    This class inherits from pydantic's `BaseModel` to provide validation 
+    and default handling of masking parameters.
+
+    Attributes
+    ----------
+    landmark_paths : list of list of tuple of int or list of tuple of int
+        A list of one or more closed landmark paths representing the 
+        region to be retained in the output. Pixels outside this region
+        are replaced with the specified background colour.
+    background_colour : tuple of int
+        A BGR colour tuple in the range [0, 255] per channel, used to 
+        fill pixels outside the masked region.
+    """
+
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
     background_colour:Tuple[int,int,int]
 
@@ -22,8 +40,63 @@ class MaskingParameters(BaseModel):
         return value
 
 class LayerMask(Layer):
+    """
+    Manipulation layer that masks a frame to one or more landmark-defined
+    regions, replacing pixels outside those regions with a solid background colour.
+
+    This layer isolates a facial region of interest by combining a landmark-derived
+    mask with a foreground segmentation mask computed via Otsu thresholding and
+    flood-filling. The intersection of these two masks ensures that only pixels
+    belonging to both the specified landmark region and the detected foreground
+    subject are retained; all other pixels are replaced with the configured
+    background colour.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration
+        Timing configuration controlling onset, offset, and rise/fall durations.
+    masking_parameters : MaskingParameters
+        Configuration model specifying the landmark region(s) and background colour.
+
+    Attributes
+    ----------
+    time_config : TimingConfiguration
+        Timing configuration used by the layer.
+    mask_params : MaskingParameters
+        Masking-specific configuration parameters.
+    landmark_paths : list of list of tuple of int or list of tuple of int
+        Landmark paths defining the region(s) to be retained in the output.
+    background_colour : tuple of int
+        BGR colour tuple used to fill pixels outside the masked region.
+
+    Notes
+    -----
+    - This layer does not support temporal weighting; the mask is applied
+      as a binary on/off effect governed solely by onset and offset times.
+    - Foreground segmentation via Otsu thresholding prevents background
+      pixels from being incorrectly included within the landmark mask region,
+      which can occur when landmark coordinates extend beyond the subject boundary.
+    """
+
     def __init__(self, timing_configuration:TimingConfiguration, masking_parameters:MaskingParameters):
-        
+        """
+        Initialize a masking manipulation layer.
+
+        Parameters
+        ----------
+        timing_configuration : TimingConfiguration
+            Timing configuration controlling when the masking effect
+            is applied.
+        masking_parameters : MaskingParameters
+            Parameters defining the target landmark region(s) and the
+            background fill colour.
+
+        Notes
+        -----
+        - The timing configuration is passed to the superclass ``Layer``.
+        - A snapshot of the initial state is taken after initialization to
+          allow safe resetting between independent applications.
+        """
         self.time_config = timing_configuration
         self.mask_params = masking_parameters
 
@@ -31,7 +104,6 @@ class LayerMask(Layer):
         super().__init__(self.time_config)
 
         # Define class parameters
-        self.static_image_mode = False
         self.landmark_paths = self.mask_params.landmark_paths
         self.background_colour = self.mask_params.background_colour
 
@@ -39,9 +111,30 @@ class LayerMask(Layer):
         self._snapshot_state()
     
     def supports_weight(self):
+        """
+        Indicate whether the layer supports temporal weighting.
+
+        Returns
+        -------
+        bool
+            ``False``, as masking operates as a binary on/off effect and
+            does not support continuous rise/fall weighting.
+        """
         return False
     
     def get_layer_parameters(self) -> dict:
+        """
+        Return the parameters defining this layer.
+
+        This method exposes all configurable parameters required to reproduce
+        the layer's behavior.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping parameter names to their current values,
+            combining both timing and masking configuration fields.
+        """
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.mask_params.model_dump())
@@ -50,7 +143,29 @@ class LayerMask(Layer):
         return dict(self._layer_parameters)
     
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
-        
+        """
+        Apply the layer's masking manipulation to a single frame.
+
+        The landmark-defined region of interest is intersected with a
+        foreground segmentation mask to isolate the subject within that
+        region. Pixels outside this intersection are replaced with the
+        configured background colour.
+
+        Parameters
+        ----------
+        landmarker_coordinates : list of tuple of int
+            Facial landmark coordinates associated with the current frame.
+        frame : MatLike
+            Input image frame to which the masking is applied.
+        dt : float
+            Current time (in milliseconds).
+
+        Returns
+        -------
+        MatLike
+            The masked frame, with pixels outside the landmark region and
+            foreground boundary replaced by the configured background colour.
+        """
         # Masking does not support weight, so weight will always be 0.0 or 1.0
         if dt is None:
             weight = 1.0
@@ -87,7 +202,43 @@ class LayerMask(Layer):
         return masked_frame
 
 def layer_mask(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, background_colour:tuple[int,int,int] = (0,0,0)) -> LayerMask:
-    # TODO: Add invert_mask option where before output you perform masked_frame = cv.bitwise_not(mask)
+    """
+    Factory function for the masking manipulation layer. `LayerMask` isolates
+    one or more landmark-defined facial regions by replacing all pixels outside
+    those regions with a configurable background colour. A foreground segmentation
+    mask derived from Otsu thresholding and flood-filling is intersected with the
+    landmark mask to prevent spurious background inclusions within the region of
+    interest.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration or None, optional
+        A pydantic model containing timing configurations controlling onset
+        and offset. If ``None``, a default ``TimingConfiguration`` is
+        instantiated. The default instantiation assumes onset at 0.0 and
+        offset at the video's duration.
+    landmark_paths : list of list of tuple of int or list of tuple of int, default=LANDMARK_FACE_OVAL
+        A list of one or more closed landmark paths representing the region
+        to be retained in the output.
+    background_colour : tuple of int, default=(0, 0, 0)
+        A BGR colour tuple in the range [0, 255] per channel, used to fill
+        all pixels outside the masked region. Defaults to black.
+
+    Returns
+    -------
+    LayerMask
+        An instance of the masking manipulation layer.
+
+    Raises
+    ------
+    ValueError
+        When provided invalid or out-of-range parameter values.
+
+    Notes
+    -----
+    - An invert mask option is planned for a future release, which would
+      retain the background and replace the landmark region instead.
+    """
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 
@@ -101,3 +252,5 @@ def layer_mask(timing_configuration:TimingConfiguration | None = None, landmark_
         raise ValueError(f"Invalid parameters for {LayerMask.__name__}: {e}")
 
     return LayerMask(time_config, params)
+
+__all__ = ["MaskingParameters", "layer_mask"]

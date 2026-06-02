@@ -3,7 +3,7 @@ from typing import Union, List, Tuple
 from pyfame.landmark.facial_landmarks import LANDMARK_FACE_OVAL
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
-from pyfame.utilities.constants import *
+from pyfame.utils.constants import *
 import cv2 as cv
 import numpy as np
 
@@ -131,8 +131,7 @@ class LayerColourBrightness(Layer):
         Return the parameters defining this layer.
 
         This method should expose all configurable parameters required
-        to reproduce the layer's behavior (excluding timing parameters,
-        which are handled separately).
+        to reproduce the layer's behavior.
 
         Returns
         -------
@@ -216,10 +215,10 @@ def layer_colour_brightness(timing_configuration:TimingConfiguration | None = No
         default `TimingConfiguration` is instantiated. The default 
         instantiation assumes a linear rise and fall transition, onset at 
         0.0 and offset at the video's duration.
-    landmark_paths: list of list of tuple of int or list of tuple of int, default=LANDMARK_FACE_OVAL
+    landmark_paths : list of list of tuple of int or list of tuple of int, default=LANDMARK_FACE_OVAL
         A list of one or more closed landmark paths representing the 
         region in which the manipulation will be applied.
-    magnitude: float, default=20.0
+    magnitude : float, default=20.0
         The degree by which to increase or decrease the brightness.
         Used as an additive factor to increase the global intensity of a frame
         or image. Accepts values in the range [-25.0, 25.0]. Magnitudes outside
@@ -250,3 +249,5 @@ def layer_colour_brightness(timing_configuration:TimingConfiguration | None = No
         
 
     return LayerColourBrightness(time_config, params)
+
+__all__ = ["BrightnessParameters", "layer_colour_brightness"]

@@ -1,4 +1,4 @@
-from pyfame.utilities.exceptions import *
+from pyfame.utils.exceptions import *
 from typing import Any
 import os
 from pathlib import Path

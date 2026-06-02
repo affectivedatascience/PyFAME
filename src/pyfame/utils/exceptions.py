@@ -66,3 +66,5 @@ class IncompatibleFileError(PyFameError):
     def __init__(self, message:str="Incompatible file type for the selected manipulation layer."):
         self.message = message
         super().__init__(self.message)
+
+__all__ = ["PyFameError", "NamespaceError", "FaceNotFoundError", "UnrecognizedExtensionError", "FileReadError", "FileWriteError", "ImageShapeError", "IncompatibleFileError"]

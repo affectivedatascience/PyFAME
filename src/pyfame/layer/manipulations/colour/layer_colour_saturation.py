@@ -3,11 +3,29 @@ from typing import Union, List, Tuple
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.landmark.facial_landmarks import LANDMARK_FACE_OVAL
-from pyfame.utilities.constants import *
+from pyfame.utils.constants import *
 import cv2 as cv
 import numpy as np
 
 class SaturationParameters(BaseModel):
+    """
+    Configuration model defining the control parameters for 
+    manipulating the colour saturation of a frame or image.
+
+    This class inherits from pydantic's `BaseModel` to provide validation 
+    and default handling of saturation parameters.
+
+    Attributes
+    ----------
+    landmark_paths : list of list of tuple of int or list of tuple of int
+        A list of one or more closed landmark paths representing the 
+        region in which the manipulation will be applied.
+    magnitude : float
+        The degree by which to increase or decrease the saturation.
+        Must lie in the range [-25.0, 25.0]. Positive values increase
+        saturation; negative values decrease it toward greyscale.
+    """
+
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
     magnitude:float
 
@@ -21,15 +39,73 @@ class SaturationParameters(BaseModel):
         return value
 
 class LayerColourSaturation(Layer):
+    """
+    Manipulation layer that selectively shifts colour saturation within
+    landmark-defined regions over time.
+
+    This layer performs targeted saturation adjustment by modifying the
+    saturation channel in the HSV colour space. A foreground mask derived
+    from Otsu thresholding and flood-filling is used to constrain the
+    effect to the subject, preventing saturation shifts from bleeding into
+    the image background.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration
+        Timing configuration controlling onset, offset, rise/fall durations,
+        and temporal weighting behavior.
+    saturation_parameters : SaturationParameters
+        Configuration model specifying landmark regions and saturation magnitude.
+
+    Attributes
+    ----------
+    time_config : TimingConfiguration
+        Timing configuration used by the layer.
+    sat_params : SaturationParameters
+        Saturation-specific configuration parameters.
+    landmark_paths : list of list of tuple of int or list of tuple of int
+        Landmark paths defining the region(s) in which saturation adjustment
+        is applied.
+    magnitude : float
+        The degree by which to increase or decrease the saturation.
+        Must lie in the range [-25.0, 25.0].
+
+    Notes
+    -----
+    - Saturation manipulation is performed in HSV space for direct and
+      intuitive control over colour vividness.
+    - A foreground mask is computed per-frame using Otsu thresholding and
+      flood-filling, ensuring that saturation changes are not applied to
+      background regions outside the subject.
+    - The effective saturation shift at a given time is scaled by the
+      temporal weight computed from the timing configuration.
+    - This layer supports continuous temporal weighting.
+    """
 
     def __init__(self, timing_configuration:TimingConfiguration, saturation_parameters:SaturationParameters):
+        """
+        Initialize a saturation manipulation layer.
 
+        Parameters
+        ----------
+        timing_configuration : TimingConfiguration
+            Timing configuration controlling when the saturation effect
+            is applied and how it transitions over time.
+        saturation_parameters : SaturationParameters
+            Parameters defining the target landmark region(s) and saturation
+            magnitude.
+
+        Notes
+        -----
+        - The timing configuration is passed to the superclass ``Layer``.
+        - A snapshot of the initial state is taken after initialization to
+          allow safe resetting between independent applications.
+        """
         self.time_config = timing_configuration
         self.sat_params = saturation_parameters
 
         # Initialise the superclass
         super().__init__(self.time_config)
-        self.static_image_mode = False
         
         # Define class parameters
         self.landmark_paths = self.sat_params.landmark_paths
@@ -39,9 +115,30 @@ class LayerColourSaturation(Layer):
         self._snapshot_state()
     
     def supports_weight(self) -> bool:
+        """
+        Indicate whether the layer supports temporal weighting.
+
+        Returns
+        -------
+        bool
+            ``True`` if the layer supports continuous rise/fall weighting,
+            ``False`` if it operates as a binary on/off manipulation.
+        """
         return True
     
     def get_layer_parameters(self) -> dict:
+        """
+        Return the parameters defining this layer.
+
+        This method exposes all configurable parameters required to reproduce
+        the layer's behavior.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping parameter names to their current values,
+            combining both timing and saturation configuration fields.
+        """
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.sat_params.model_dump())
@@ -50,7 +147,31 @@ class LayerColourSaturation(Layer):
         return dict(self._layer_parameters)
     
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
-        
+        """
+        Apply the layer's saturation manipulation to a single frame.
+
+        The saturation channel of the HSV-converted frame is shifted by
+        the configured magnitude within the landmark-defined region. A
+        foreground mask computed from Otsu thresholding and flood-filling
+        is used to preserve the original pixel values in background regions
+        unrelated to the subject.
+
+        Parameters
+        ----------
+        landmarker_coordinates : list of tuple of int
+            Facial landmark coordinates associated with the current frame.
+        frame : MatLike
+            Input image frame to which the manipulation is applied.
+        dt : float
+            Current time (in milliseconds).
+
+        Returns
+        -------
+        MatLike
+            The manipulated frame with saturation adjusted within the
+            specified landmark region, with background pixels restored
+            to their original values.
+        """
         if dt is None:
             weight = 1.0
         else:
@@ -83,7 +204,7 @@ class LayerColourSaturation(Layer):
         # Split the image channels so only the saturation can be shifted
         h,s,v = cv.split(img_hsv)
         s = np.where(mask == 255, s + (weight * self.magnitude), s)
-        np.clip(s,0,255)
+        s = np.clip(s,0,255)
         img_hsv = cv.merge([h,s,v])
         
         # Convert the HSV image back to BGR before returning the processed image
@@ -92,6 +213,39 @@ class LayerColourSaturation(Layer):
         return img_bgr
         
 def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, magnitude:float = -12.0) -> LayerColourSaturation:
+    """
+    Factory function for the saturation manipulation layer. `LayerColourSaturation`
+    leverages the HSV colour space to perform intuitive saturation shifts within a
+    specified region of the face. A foreground mask derived from Otsu thresholding
+    ensures that saturation changes are constrained to the subject and do not affect
+    the image background.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration or None, optional
+        A pydantic model containing timing configurations controlling onset,
+        offset, rise/fall durations, and weighting curves. If ``None``, a
+        default ``TimingConfiguration`` is instantiated. The default
+        instantiation assumes a linear rise and fall transition, onset at
+        0.0 and offset at the video's duration.
+    landmark_paths : list of list of tuple of int or list of tuple of int, default=LANDMARK_FACE_OVAL
+        A list of one or more closed landmark paths representing the
+        region in which the manipulation will be applied.
+    magnitude : float, default=-12.0
+        The degree by which to increase or decrease the saturation.
+        Must lie in the range [-25.0, 25.0]. Positive values increase
+        colour vividness; negative values shift the region toward greyscale.
+
+    Returns
+    -------
+    LayerColourSaturation
+        An instance of the saturation manipulation layer.
+
+    Raises
+    ------
+    ValueError
+        When provided invalid or out-of-range parameter values.
+    """
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 
@@ -105,3 +259,5 @@ def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None
         raise ValueError(f"Invalid parameters for {LayerColourSaturation.__name__}: {e}")
 
     return LayerColourSaturation(time_config, params)
+
+__all__ = ["SaturationParameters", "layer_colour_saturation"]

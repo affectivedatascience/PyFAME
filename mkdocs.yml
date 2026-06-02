@@ -1,0 +1,103 @@
+site_name: PyFAME
+site_description: Documentation for PyFAME
+site_url: https://gavin-bosman.github.io/PyFAME
+repo_url: https://github.com/Gavin-Bosman/PyFAME
+repo_name: Gavin-Bosman/PyFAME                    
+
+theme:
+  name: material
+  features:
+    - navigation.indexes       # allows section index pages (important for API nav)
+    - navigation.tabs          # top-level sections as tabs
+    - navigation.tabs.sticky   # tabs stay visible on scroll
+    - navigation.sections      # expand sections in sidebar
+    - navigation.top           # back-to-top button
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+ 
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          inventories:
+            - https://docs.python.org/3/objects.inv
+          options:
+            docstring_style: numpy
+            docstring_section_style: table
+            heading_level: 1
+            show_root_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            merge_init_into_class: true
+            separate_signature: true
+            show_signature_annotations: true
+            parameter_headings: true
+            inherited_members: false
+            show_submodules: false
+            filters:
+              - "!^_"          # hide private members by default
+              - "!Parameters$"
+              - "!Error$"
+            summary: true
+  - api-autonav:
+      modules:
+        - src/pyfame
+      exclude:
+        - pyfame.analyse.optical_flow_utils
+        - "re:pyfame\\.file_access\\.file_access_.*"
+        - pyfame.file_access.checks
+        - pyfame.models
+        - pyfame.schema
+        - pyfame.utils.constants
+      nav_section_title: "API Reference"
+      api_root_uri: "reference"
+      exclude_private: true
+      show_full_namespace: false
+      module_options:
+        ".*":
+          heading_level: 1
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+ 
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting-started/index.md
+  - Tutorials:
+    - tutorials/index.md
+  - Changelog: changelog.md
+  - "API Reference"
+
+extra_css:
+  - stylesheets/extra.css
+ 
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

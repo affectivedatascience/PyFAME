@@ -4,6 +4,22 @@ from pyfame.layer.manipulations.colour.layer_colour_recolour import LayerColourR
 from pyfame.layer.manipulations.overlay.layer_overlay import LayerOverlay
 
 class LayerPipeline:
+    """
+    A container class that resolves layer ordering and sequentially 
+    applies layers to a given input image/frame. 
+
+    Notes
+    -----
+    - `enforce_layer_ordering()` ensures that weighted full-frame 
+    manipulations are applied first, and that unweighted (binary) 
+    manipulations are applied second. This is done to ensure that 
+    colour and spatial transforms are accurately represented prior
+    to the addition of occlusions or regional masking.
+    - `apply_layers()` provides distinct behavour for 
+    `LayerColourRecolour` and `LayerOverlay` as they require 
+    blendshapes from the mediapipe FaceLandmarker task.
+    """
+    
     def __init__(self):
         self.layers = []
 
@@ -53,3 +69,5 @@ class LayerPipeline:
                     dt = dt
                 )
         return frame
+
+__all__ = ["LayerPipeline"]

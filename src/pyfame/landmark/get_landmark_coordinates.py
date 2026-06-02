@@ -1,4 +1,4 @@
-from pyfame.utilities.exceptions import *
+from pyfame.utils.exceptions import *
 import cv2 as cv
 from typing import Any
 from mediapipe.tasks import python
@@ -154,3 +154,5 @@ def get_concave_landmark_coordinates(concave_path) -> list[tuple[int,int]]:
             raise ValueError("The concave path you have passed is either unrecognized or incompatible with get_concave_path_coords().")
     
     return output_path
+
+__all__ = ["get_face_landmarker", "get_pixel_coordinates", "get_pixel_coordinates_from_landmark", "get_concave_landmark_coordinates"]

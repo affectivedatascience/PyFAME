@@ -5,14 +5,46 @@ from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.layer.manipulations.spatial.face_anchors import FaceAnchor
-from pyfame.utilities.constants import *
+from pyfame.utils.constants import *
 import cv2 as cv
 import numpy as np
 from operator import itemgetter
 
+### TODO investigate scaling inpainting radius with facial width
+
 class LandmarkRelocateSpec(BaseModel):
+    """
+    Specification model defining the relocation parameters for a single
+    facial landmark region.
+
+    This class inherits from pydantic's `BaseModel` to provide validation
+    and default handling of per-landmark relocation parameters. One
+    ``LandmarkRelocateSpec`` is defined per landmark region, collected
+    into a ``RelocateParameters.user_specs`` dictionary keyed by landmark
+    index.
+
+    Attributes
+    ----------
+    anchor : FaceAnchor
+        The facial anchor point to which this landmark region is relocated.
+        Anchors are defined in normalised face coordinates relative to the
+        face center and dimensions.
+    rotatation_deg : float, default=0.0
+        The rotation angle in degrees applied to the landmark crop before
+        it is cloned into its new position. Positive values rotate
+        clockwise; negative values rotate counter-clockwise.
+    offsets : tuple of float, default=(0.0, 0.0)
+        Normalised (x, y) offsets applied to the anchor position, expressed
+        as fractions of face width and face height respectively. Both values
+        must lie in the range [-1.0, 1.0]. Positive x shifts the landmark
+        rightward; positive y shifts it downward.
+
+    Notes
+    -----
+    """
+
     anchor:FaceAnchor
-    rotatation_deg:float = 0.0
+    rotation_deg:float = 0.0
     offsets:Tuple[float,float] = (0.0, 0.0)  # Normalised x,y offsets
 
     @field_validator('offsets')
@@ -27,10 +59,39 @@ class LandmarkRelocateSpec(BaseModel):
         
         return value
 
-
 class RelocateParameters(BaseModel):
+    """
+    Configuration model defining the control parameters for the landmark
+    relocation spatial manipulation.
+
+    This class inherits from pydantic's `BaseModel` to provide validation
+    and default handling of relocation parameters.
+
+    Attributes
+    ----------
+    random_seed : int or None, optional
+        An optional positive integer seed for the random number generator,
+        enabling reproducible random relocation specifications across runs.
+        If ``None``, a seed is sampled uniformly from [0, 1000) at
+        initialisation time.
+    user_specs : dict of {int : LandmarkRelocateSpec} or None, optional
+        A dictionary mapping landmark keys to their relocation
+        specifications. Keys are integers in the range [0, 3], corresponding
+        to left eye (0), right eye (1), nose (2), and mouth (3). If ``None``,
+        a random specification is generated from ``max_random_offset`` at
+        layer initialisation.
+    max_random_offset : float
+        The maximum absolute normalised offset applied to each landmark
+        when generating a random relocation specification. Must lie in the
+        range [0.0, 1.0]. Ignored when ``user_specs`` is provided.
+    out_greyscale : bool
+        If ``True``, the output frame is converted to greyscale before
+        being returned, while preserving the three-channel BGR format
+        required by downstream processing.
+    """
+
     random_seed:Optional[PositiveInt] = None
-    user_spec:Optional[Dict[int, LandmarkRelocateSpec]] = None
+    user_specs:Optional[Dict[int, LandmarkRelocateSpec]] = None
     max_random_offset:float
     out_greyscale:bool
 
@@ -45,7 +106,93 @@ class RelocateParameters(BaseModel):
         return value
 
 class LayerSpatialLandmarkRelocate(Layer):
+    """
+    Manipulation layer that extracts the four primary facial feature regions
+    (left eye, right eye, nose, mouth), removes them from their original
+    positions using inpainting, and recomposites them at new positions on
+    the face according to a relocation specification.
+
+    Each landmark region is cut from the frame, its vacated area is filled
+    using Navier-Stokes inpainting to restore a plausible skin texture, and
+    the crop is rotated and seamlessly cloned onto the face at the position
+    defined by a facial anchor point and normalised offsets. The result
+    is optionally converted to greyscale.
+
+    A relocation specification may be provided explicitly as a dictionary
+    of ``LandmarkRelocateSpec`` objects, one per landmark region, or
+    generated randomly from a configurable maximum offset magnitude. The
+    random number generator is seeded once at initialisation, ensuring
+    a consistent random specification is used across all frames of a
+    sequence.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration
+        Timing configuration controlling onset, offset, and rise/fall
+        durations.
+    relocation_parameters : RelocateParameters
+        Configuration model specifying the relocation specification,
+        random seed, maximum random offset, and greyscale output flag.
+
+    Attributes
+    ----------
+    time_config : TimingConfiguration
+        Timing configuration used by the layer.
+    relocate_params : RelocateParameters
+        Relocation-specific configuration parameters.
+    rand_seed : int
+        Seed used for the random number generator. If ``None`` was provided,
+        a seed is sampled from [0, 1000) at initialisation time.
+    max_random_offset : float
+        Maximum absolute normalised offset used when generating a random
+        relocation specification.
+    out_greyscale : bool
+        If ``True``, the output frame is returned in greyscale.
+    pad_map : dict of {int : int}
+        Per-landmark padding in pixels added to the bounding box of each
+        crop. Keys correspond to landmark indices: 0 (left eye, 10px),
+        1 (right eye, 10px), 2 (nose, 20px), 3 (mouth, 20px).
+    rng : numpy.random.Generator
+        Random number generator instance seeded with ``rand_seed``, used
+        to produce the random relocation specification.
+
+    Notes
+    -----
+    - This layer does not support temporal weighting; relocation is applied
+      as a binary on/off effect governed solely by onset and offset times.
+    - A weighted blend between the inpainted frame and a face-mean-toned
+      overlay is applied before landmark cloning, to reduce colour
+      discontinuities introduced by inpainting.
+    - Seamless cloning via ``cv.seamlessClone`` is used for final landmark
+      compositing, which may fail or produce artefacts if the destination
+      center point is too close to the frame boundary.
+    """
+
     def __init__(self, timing_configuration:TimingConfiguration, relocation_parameters:RelocateParameters):
+        """
+        Initialize a landmark relocation spatial manipulation layer.
+
+        Parameters
+        ----------
+        timing_configuration : TimingConfiguration
+            Timing configuration controlling when the relocation effect
+            is applied.
+        relocation_parameters : RelocateParameters
+            Parameters defining the relocation specification, random seed,
+            maximum random offset, and greyscale output flag.
+
+        Notes
+        -----
+        - If ``random_seed`` is ``None``, a seed is sampled from [0, 1000)
+          using ``numpy.random.randint`` before the seeded generator is
+          instantiated, ensuring reproducibility even when no explicit seed
+          is provided by the caller.
+        - If ``user_specs`` is ``None``, a random relocation specification
+          is generated immediately via ``_get_random_relocate_spec`` and
+          stored in ``relocate_params.user_specs``.
+        - A snapshot of the initial state is taken after initialization to
+          allow safe resetting between independent applications.
+        """
         self.time_config = timing_configuration
         self.relocate_params = relocation_parameters
 
@@ -64,21 +211,41 @@ class LayerSpatialLandmarkRelocate(Layer):
             2 : 20,
             3 : 20
         }
-        
         # Compute random state variables once on init
         self.rng = np.random.default_rng(self.rand_seed)
 
         # If no user spec, generate random spec
-        if self.relocate_params.user_spec is None:
-            self.relocate_params.user_spec = self._get_random_relocate_spec()
+        if self.relocate_params.user_specs is None:
+            self.relocate_params.user_specs = self._get_random_relocate_spec()
 
         # Snapshot of initial state
         self._snapshot_state()
     
     def supports_weight(self):
+        """
+        Indicate whether the layer supports temporal weighting.
+
+        Returns
+        -------
+        bool
+            ``False``, as landmark relocation operates as a binary on/off
+            effect and does not support continuous rise/fall weighting.
+        """
         return False
 
     def get_layer_parameters(self) -> dict:
+        """
+        Return the parameters defining this layer.
+
+        This method exposes all configurable parameters required to reproduce
+        the layer's behavior.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping parameter names to their current values,
+            combining both timing and relocation configuration fields.
+        """
         # Dump the pydantic models to get dict of full parameter list
         self._layer_parameters = self.time_config.model_dump()
         self._layer_parameters.update(self.relocate_params.model_dump())
@@ -121,7 +288,7 @@ class LayerSpatialLandmarkRelocate(Layer):
 
             specs[key] = LandmarkRelocateSpec(
                 anchor=anchor,
-                rotatation_deg=rotation_angle,
+                rotation_deg=rotation_angle,
                 offsets=(offset_x, offset_y)
             )
         
@@ -129,13 +296,77 @@ class LayerSpatialLandmarkRelocate(Layer):
     
     @staticmethod
     def _anchor_to_pixel(anchor, face_center, face_width, face_height):
+        """
+        Convert a normalised ``FaceAnchor`` position to absolute pixel
+        coordinates in the frame.
+
+        The anchor's normalised (x, y) value is scaled by face width and
+        face height respectively and offset from the face center to produce
+        the final pixel position.
+
+        Parameters
+        ----------
+        anchor : FaceAnchor
+            The facial anchor whose normalised position is to be converted.
+        face_center : tuple of int
+            The (x, y) pixel coordinates of the face center, computed from
+            the bounding box of the face oval landmark.
+        face_width : int
+            The pixel width of the face oval bounding box.
+        face_height : int
+            The pixel height of the face oval bounding box.
+
+        Returns
+        -------
+        px : int
+            The absolute x pixel coordinate of the anchor position.
+        py : int
+            The absolute y pixel coordinate of the anchor position.
+        """
         ax, ay = anchor.value
         px = int(face_center[0] + ax * face_width)
         py = int(face_center[1] + ay * face_height)
         return px, py
     
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float) -> cv.typing.MatLike:
-        
+        """
+        Apply the landmark relocation manipulation to a single frame.
+
+        Each of the four landmark regions (left eye, right eye, nose, mouth)
+        is extracted as a padded crop, replaced in the output frame using
+        Navier-Stokes inpainting, which also has a slight Gaussian-blur applied
+        to soften artefacts. After all four regions have been
+        removed, a weighted blend with a face-mean-toned overlay is applied
+        to reduce colour discontinuities. Each landmark crop is then rotated
+        according to its relocation specification and seamlessly cloned onto
+        the face at the position defined by its anchor and normalised offsets.
+
+        Parameters
+        ----------
+        landmarker_coordinates : list of tuple of int
+            Facial landmark coordinates associated with the current frame.
+        frame : MatLike
+            Input image frame to which the landmark relocation is applied.
+        dt : float
+            Current time (in milliseconds).
+
+        Returns
+        -------
+        MatLike
+            The frame with all four landmark regions removed from their
+            original positions and recomposited at their specified new
+            positions. If ``out_greyscale`` is ``True``, the output is
+            returned as a three-channel greyscale image.
+
+        Notes
+        -----
+        - The inpainting radius of 15 pixels is currently hardcoded and may be
+          insufficient for larger landmark regions at high resolutions. A future
+          addition is planned to add dynamic radius computation.
+        - ``cv.seamlessClone`` may produce artefacts or raise an error if
+          the destination center point ``(cx, cy)`` lies within approximately
+          half the clone patch width of the frame boundary.
+        """
         if dt is None:
             weight = 1.0
         else:
@@ -230,7 +461,7 @@ class LayerSpatialLandmarkRelocate(Layer):
         
         # Cloning rotated landmarks into their new positions on the underlying face
         for key in list(landmarks.keys()):
-            spec = self.relocate_params.user_spec.get(key)
+            spec = self.relocate_params.user_specs.get(key)
             lm = landmarks.get(key)
             landmark = lm['img']
             mask = lm['mask']
@@ -244,7 +475,7 @@ class LayerSpatialLandmarkRelocate(Layer):
             cx += int(spec.offsets[0] * face_width)
             cy += int(spec.offsets[1] * face_height)
 
-            rot_mat = cv.getRotationMatrix2D(center=local_center, angle=spec.rotatation_deg, scale=1)
+            rot_mat = cv.getRotationMatrix2D(center=local_center, angle=spec.rotation_deg, scale=1)
 
             # rotate landmark and mask
             landmark = cv.warpAffine(landmark, rot_mat, (w,h))
@@ -260,8 +491,57 @@ class LayerSpatialLandmarkRelocate(Layer):
         else:
             return output_frame
         
-def layer_spatial_landmark_relocate(timing_configuration:TimingConfiguration | None = None, landmark_relocate_spec:dict[int, LandmarkRelocateSpec] | None = None,
+def layer_spatial_landmark_relocate(timing_configuration:TimingConfiguration | None = None, landmark_relocate_specs:dict[int, LandmarkRelocateSpec] | None = None,
                                     random_seed:int | None = None, max_random_offset:float = 0.15, out_greyscale:bool = True) -> LayerSpatialLandmarkRelocate:
+    """
+    Factory function for the landmark relocation spatial manipulation layer.
+    `LayerSpatialLandmarkRelocate` extracts the four primary facial feature
+    regions (left eye, right eye, nose, and mouth), removes them from their
+    original positions using Navier-Stokes inpainting, and recomposites them
+    at new positions on the face defined by a relocation specification. Each
+    landmark may be assigned an independent anchor point, normalised positional
+    offset, and rotation angle.
+
+    A relocation specification may be provided explicitly or generated
+    randomly from a configurable maximum offset magnitude. When generated
+    randomly, the specification is fixed at layer initialisation and applied
+    consistently across all frames of the sequence.
+
+    Parameters
+    ----------
+    timing_configuration : TimingConfiguration or None, optional
+        A pydantic model containing timing configurations controlling onset
+        and offset. If ``None``, a default ``TimingConfiguration`` is
+        instantiated. The default instantiation assumes onset at 0.0 and
+        offset at the video's duration.
+    landmark_relocate_specs : dict of {int : LandmarkRelocateSpec} or None, default=None
+        A dictionary mapping landmark keys to their relocation specifications.
+        Keys are integers in the range [0, 3], corresponding to left eye (0),
+        right eye (1), nose (2), and mouth (3). If ``None``, a random
+        specification is generated from ``max_random_offset``.
+    random_seed : int or None, default=None
+        An optional positive integer seed for the random number generator,
+        enabling reproducible random relocation specifications. If ``None``,
+        a seed is sampled from [0, 1000) at layer initialisation.
+    max_random_offset : float, default=0.15
+        The maximum absolute normalised offset applied to each landmark
+        when generating a random relocation specification. Must lie in the
+        range [0.0, 1.0]. Ignored when ``landmark_relocate_spec`` is provided.
+    out_greyscale : bool, default=True
+        If ``True``, the output frame is converted to greyscale before being
+        returned, while preserving the three-channel BGR format required by
+        downstream processing.
+
+    Returns
+    -------
+    LayerSpatialLandmarkRelocate
+        An instance of the landmark relocation spatial manipulation layer.
+
+    Raises
+    ------
+    ValueError
+        When provided invalid or out-of-range parameter values.
+    """
     # Populate with defaults if None
     time_config = timing_configuration or TimingConfiguration()
 
@@ -269,7 +549,7 @@ def layer_spatial_landmark_relocate(timing_configuration:TimingConfiguration | N
     try:
         params = RelocateParameters(
             random_seed=random_seed,
-            user_spec=landmark_relocate_spec,
+            user_specs=landmark_relocate_specs,
             max_random_offset=max_random_offset,
             out_greyscale=out_greyscale
         )
@@ -277,3 +557,5 @@ def layer_spatial_landmark_relocate(timing_configuration:TimingConfiguration | N
         raise ValueError(f"Invalid parameters for {LayerSpatialLandmarkRelocate.__name__}: {e}")
     
     return LayerSpatialLandmarkRelocate(time_config, params)
+
+__all__ = ["layer_spatial_landmark_relocate", "RelocateParameters"]

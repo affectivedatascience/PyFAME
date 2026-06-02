@@ -43,4 +43,4 @@ class EyeBlendshapeSmoother:
                 return bs.score
         return 0.0
     
-    
+__all__ = ["EyeBlendshapeSmoother"]
