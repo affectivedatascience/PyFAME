@@ -6,7 +6,17 @@ scikit-image>=0.24.0
 pydantic>=2.11.0
 matplotlib>=3.10.0
 tqdm>=4.67.0
+av>=16.1.0
 
 [dev]
-pytest
-tox
+pyfame[docs]
+pytest>=8.0.0
+tox>=4.24.0
+build
+twine
+
+[docs]
+mkdocs>=1.6
+mkdocs-material>=9.5
+mkdocstrings[python]>=0.25
+mkdocs-api-autonav>=0.3

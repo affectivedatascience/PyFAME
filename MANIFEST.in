@@ -1,0 +1,18 @@
+include LICENSE.txt
+include README.md
+include pyproject.toml
+include src/pyfame/py.typed
+
+recursive-include src/pyfame *.py *.pyi *.typed
+recursive-include src/pyfame/schema *.json
+recursive-include src/pyfame/models/mediapipe *.task
+recursive-include src/pyfame/layer/manipulations/overlay/overlay_images *.png *.jpg
+
+prune data
+prune scripts
+prune docs
+prune docs_depricated
+prune tests
+prune node_modules
+prune .tox
+prune venv311

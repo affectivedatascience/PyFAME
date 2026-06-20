@@ -1,4 +1,5 @@
 LICENSE.txt
+MANIFEST.in
 README.md
 pyproject.toml
 setup.cfg
@@ -11,10 +12,10 @@ src/PyFAME.egg-info/top_level.txt
 src/pyfame/__init__.py
 src/pyfame/py.typed
 src/pyfame/analyse/__init__.py
+src/pyfame/analyse/_optical_flow_utils.py
 src/pyfame/analyse/analyse_facial_colour_means.py
 src/pyfame/analyse/analyse_optical_flow_dense.py
 src/pyfame/analyse/analyse_optical_flow_sparse.py
-src/pyfame/analyse/optical_flow_utils.py
 src/pyfame/file_access/__init__.py
 src/pyfame/file_access/analysis_to_disk.py
 src/pyfame/file_access/checks.py
@@ -50,6 +51,10 @@ src/pyfame/layer/manipulations/occlusion/layer_occlusion_landmark.py
 src/pyfame/layer/manipulations/occlusion/layer_occlusion_noise.py
 src/pyfame/layer/manipulations/overlay/__init__.py
 src/pyfame/layer/manipulations/overlay/layer_overlay.py
+src/pyfame/layer/manipulations/overlay/overlay_images/face_mask.png
+src/pyfame/layer/manipulations/overlay/overlay_images/glasses.png
+src/pyfame/layer/manipulations/overlay/overlay_images/sunglasses.png
+src/pyfame/layer/manipulations/overlay/overlay_images/teardrop_1.png
 src/pyfame/layer/manipulations/spatial/__init__.py
 src/pyfame/layer/manipulations/spatial/face_anchors.py
 src/pyfame/layer/manipulations/spatial/layer_spatial_grid_shuffle.py
@@ -63,13 +68,8 @@ src/pyfame/logging/__init__.py
 src/pyfame/logging/read_experiment_log.py
 src/pyfame/logging/write_experiment_log.py
 src/pyfame/models/mediapipe/face_landmarker.task
-src/pyfame/schema/__init__.py
 src/pyfame/schema/manipulation_log.v1.schema.json
-src/pyfame/utilities/__init__.py
-src/pyfame/utilities/constants.py
-src/pyfame/utilities/exceptions.py
-src/pyfame/utilities/general_utilities.py
-tests/test_facial_scramble.py
-tests/test_gen_shuffled_block_arr.py
-tests/test_generate_pld.py
-tests/test_shuffle_frame_order.py
+src/pyfame/utils/__init__.py
+src/pyfame/utils/constants.py
+src/pyfame/utils/exceptions.py
+src/pyfame/utils/general_utilities.py

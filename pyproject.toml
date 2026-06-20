@@ -47,7 +47,9 @@ docs = [
 dev = [
     "pyfame[docs]",
     "pytest >= 8.0.0",
-    "tox >= 4.24.0"
+    "tox >= 4.24.0",
+    "build",
+    "twine"
 ]
 
 [project.urls]
@@ -58,7 +60,7 @@ where = ["src"]
 include = ["pyfame*"]
 
 [tool.setuptools.package-data]
-"pyfame" = ["py.typed"]
+"pyfame" = ["py.typed", "*typed"]
 "pyfame.schema" = ["*.json"]
 "pyfame.models.mediapipe" = ["*.task"]
 "pyfame.layer.manipulations.overlay.overlay_images" = ["*.png", "*.jpg"]

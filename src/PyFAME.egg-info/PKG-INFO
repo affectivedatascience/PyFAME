@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: PyFAME
 Version: 1.0.0
 Summary: PyFAME: the Python Facial Analysis and Manipulation Environment
@@ -679,8 +679,8 @@ License:                      GNU GENERAL PUBLIC LICENSE
         the library.  If this is what you want to do, use the GNU Lesser General
         Public License instead of this License.  But first, please read
         <https://www.gnu.org/licenses/why-not-lgpl.html>.
-Project-URL: Homepage, https://github.com/Gavin-Bosman/PyFAME
-Keywords: pyfame,occlusion,masking,coloring,colouring,psychology
+Project-URL: Homepage, https://github.com/affectivedatascience/PyFAME
+Keywords: Facial Manipulation,Vision,Occlusion,Masking,Coloring,Affective Computing
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
@@ -692,21 +692,41 @@ Classifier: Topic :: Scientific/Engineering :: Image Processing
 Classifier: Typing :: Typed
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
-Provides-Extra: dev
 License-File: LICENSE.txt
+Requires-Dist: opencv-python>=4.10.0.0
+Requires-Dist: mediapipe>=0.10.20
+Requires-Dist: pandas>=2.2.0
+Requires-Dist: numpy<=2.0.0
+Requires-Dist: scikit-image>=0.24.0
+Requires-Dist: pydantic>=2.11.0
+Requires-Dist: matplotlib>=3.10.0
+Requires-Dist: tqdm>=4.67.0
+Requires-Dist: av>=16.1.0
+Provides-Extra: docs
+Requires-Dist: mkdocs>=1.6; extra == "docs"
+Requires-Dist: mkdocs-material>=9.5; extra == "docs"
+Requires-Dist: mkdocstrings[python]>=0.25; extra == "docs"
+Requires-Dist: mkdocs-api-autonav>=0.3; extra == "docs"
+Provides-Extra: dev
+Requires-Dist: pyfame[docs]; extra == "dev"
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: tox>=4.24.0; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Requires-Dist: twine; extra == "dev"
+Dynamic: license-file
 
 ![Tests](https://github.com/Gavin-Bosman/PyFAME/actions/workflows/tests.yml/badge.svg)
 ![Docs](https://github.com/Gavin-Bosman/PyFAME/actions/workflows/deploy.yml/badge.svg)
 
 # PyFAME: the Python Facial Analysis and Manipulation Environment
-<img src="./docs/src/public/pyfame_logo.png" width=300 />
+<img src="./docs_depricated/src/public/pyfame_logo.png" width=300 />
 
 PyFAME is a python package for dynamic region occlusion and skin colour modification of faces in video and images. Provides a range of tools for changing the colour of user-specified facial regions using industry-standard colour spaces (L*a*b, HSV, BGR), occlusion of user-defined facial regions (e.g., eyes, nose, mouth, hemi-face), and isolation of the head from background scene through video matting. Facial modifications can be further transitioned on and off through a range of timing functions (e.g., linear, sigmoid, Gaussian etc).
 
 PyFAME enables researchers to apply complex facial manipulations to just the face in dynamic video and still images scenes in several lines of code.
 Here is an example of PyFAME performing pixel-level modifications to create new videos from the original one:
 
-<img src="./docs/docsite/output_grid.png" width=400/>
+<img src="./docs_depricated/docsite/output_grid.png" width=400/>
 
 ## Statement of Need
 
