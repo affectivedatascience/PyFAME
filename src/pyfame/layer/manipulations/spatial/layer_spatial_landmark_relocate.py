@@ -213,10 +213,13 @@ class LayerSpatialLandmarkRelocate(Layer):
         }
         # Compute random state variables once on init
         self.rng = np.random.default_rng(self.rand_seed)
+        self.relocate_keys = [0,1,2,3]
 
         # If no user spec, generate random spec
         if self.relocate_params.user_specs is None:
             self.relocate_params.user_specs = self._get_random_relocate_spec()
+        else:
+            self.relocate_keys = list(self.relocate_params.user_specs.keys())
 
         # Snapshot of initial state
         self._snapshot_state()
@@ -418,41 +421,42 @@ class LayerSpatialLandmarkRelocate(Layer):
         for i, (mask, coords) in enumerate(zip(masks, screen_coords)):
             # --------- Cutting out and storing landmarks ----------
             # min and max coords + padding
-            max_x = min(output_frame.shape[1], max(coords, key=itemgetter(0))[0] + self.pad_map[i])
-            min_x = max(0, min(coords, key=itemgetter(0))[0] - self.pad_map[i])
-            max_y = min(output_frame.shape[0], max(coords, key=itemgetter(1))[1] + self.pad_map[i])
-            min_y = max(0, min(coords, key=itemgetter(1))[1] - self.pad_map[i])
+            if i in self.relocate_keys:
+                max_x = min(output_frame.shape[1], max(coords, key=itemgetter(0))[0] + self.pad_map[i])
+                min_x = max(0, min(coords, key=itemgetter(0))[0] - self.pad_map[i])
+                max_y = min(output_frame.shape[0], max(coords, key=itemgetter(1))[1] + self.pad_map[i])
+                min_y = max(0, min(coords, key=itemgetter(1))[1] - self.pad_map[i])
 
-            # Crop the frame to the bounds of the landmark
-            cropped_lm = output_frame[min_y:max_y, min_x:max_x]
-            cropped_mask = mask[min_y:max_y, min_x:max_x]
+                # Crop the frame to the bounds of the landmark
+                cropped_lm = output_frame[min_y:max_y, min_x:max_x]
+                cropped_mask = mask[min_y:max_y, min_x:max_x]
 
-            # Cut out the current landmark region and store it
-            lm = cv.bitwise_and(src1=cropped_lm, src2=cropped_lm, mask=cropped_mask)
-            # Compute the localised landmark center coords
-            cx = (cropped_lm.shape[1]) // 2
-            cy = (cropped_lm.shape[0]) // 2
+                # Cut out the current landmark region and store it
+                lm = cv.bitwise_and(src1=cropped_lm, src2=cropped_lm, mask=cropped_mask)
+                # Compute the localised landmark center coords
+                cx = (cropped_lm.shape[1]) // 2
+                cy = (cropped_lm.shape[0]) // 2
 
-            landmarks[i].update({'img' : lm, 'mask' : cropped_mask, 'center' : (cx,cy)})
+                landmarks[i].update({'img' : lm, 'mask' : cropped_mask, 'center' : (cx,cy)})
 
-            # ---------- Filling in cut out regions of the original frame ----------
-            # fill the original lm region in the output frame with empty pixels 
-            output_frame = cv.bitwise_and(src1=output_frame, src2=output_frame, mask=cv.bitwise_not(mask))
+                # ---------- Filling in cut out regions of the original frame ----------
+                # fill the original lm region in the output frame with empty pixels 
+                output_frame = cv.bitwise_and(src1=output_frame, src2=output_frame, mask=cv.bitwise_not(mask))
 
-            # Fill landmark holes with navier-stokes inpainting;
-            # uses nearest-neighbor colour sampling to fill in gaps in an image
-            output_frame = cv.inpaint(output_frame, mask, 15, cv.INPAINT_NS)
+                # Fill landmark holes with navier-stokes inpainting;
+                # uses nearest-neighbor colour sampling to fill in gaps in an image
+                output_frame = cv.inpaint(output_frame, mask, 15, cv.INPAINT_NS)
 
-            # dilate the landmark mask slightly, and blur around inpainted edges
-            kernel = np.ones((5,5), np.uint8)
-            dilated_mask = cv.dilate(mask, kernel, iterations=1)
-            dilated_mask = dilated_mask[..., np.newaxis]
+                # dilate the landmark mask slightly, and blur around inpainted edges
+                kernel = np.ones((5,5), np.uint8)
+                dilated_mask = cv.dilate(mask, kernel, iterations=1)
+                dilated_mask = dilated_mask[..., np.newaxis]
 
-            # blur the output frame around the inpainted landmarks
-            face_only = cv.bitwise_and(output_frame, output_frame, mask=fo_mask)
-            face_only = cv.GaussianBlur(face_only, (15,15), sigmaX=10)
+                # blur the output frame around the inpainted landmarks
+                face_only = cv.bitwise_and(output_frame, output_frame, mask=fo_mask)
+                face_only = cv.GaussianBlur(face_only, (15,15), sigmaX=10)
 
-            output_frame = np.where(dilated_mask == 255, face_only, output_frame)
+                output_frame = np.where(dilated_mask == 255, face_only, output_frame)
         
         # Perform a weighted addition between the facial mean tone and the inpainted image
         facial_mean = cv.mean(frame, mask=face_skin_mask)[:3]
@@ -462,27 +466,28 @@ class LayerSpatialLandmarkRelocate(Layer):
         # Cloning rotated landmarks into their new positions on the underlying face
         for key in list(landmarks.keys()):
             spec = self.relocate_params.user_specs.get(key)
-            lm = landmarks.get(key)
-            landmark = lm['img']
-            mask = lm['mask']
-            local_center = lm['center']
-            h,w = landmark.shape[:2]
+            if spec is not None:
+                lm = landmarks.get(key)
+                landmark = lm['img']
+                mask = lm['mask']
+                local_center = lm['center']
+                h,w = landmark.shape[:2]
 
-            # Get pixel coordinates from facial anchor
-            cx, cy = self._anchor_to_pixel(spec.anchor, face_center, face_width, face_height)
+                # Get pixel coordinates from facial anchor
+                cx, cy = self._anchor_to_pixel(spec.anchor, face_center, face_width, face_height)
 
-            # Adding normalised offsets
-            cx += int(spec.offsets[0] * face_width)
-            cy += int(spec.offsets[1] * face_height)
+                # Adding normalised offsets
+                cx += int(spec.offsets[0] * face_width)
+                cy += int(spec.offsets[1] * face_height)
 
-            rot_mat = cv.getRotationMatrix2D(center=local_center, angle=spec.rotation_deg, scale=1)
+                rot_mat = cv.getRotationMatrix2D(center=local_center, angle=spec.rotation_deg, scale=1)
 
-            # rotate landmark and mask
-            landmark = cv.warpAffine(landmark, rot_mat, (w,h))
-            mask = cv.warpAffine(mask, rot_mat, (w,h))
-            
-            # Clone the landmark onto the original face in its new position
-            output_frame = cv.seamlessClone(landmark, output_frame, mask, (cx, cy), cv.NORMAL_CLONE)
+                # rotate landmark and mask
+                landmark = cv.warpAffine(landmark, rot_mat, (w,h))
+                mask = cv.warpAffine(mask, rot_mat, (w,h))
+                
+                # Clone the landmark onto the original face in its new position
+                output_frame = cv.seamlessClone(landmark, output_frame, mask, (cx, cy), cv.NORMAL_CLONE)
 
         if self.out_greyscale:
             gray = cv.cvtColor(output_frame, cv.COLOR_BGR2GRAY)

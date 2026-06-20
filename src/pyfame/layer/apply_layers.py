@@ -9,6 +9,7 @@ from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_pi
 import cv2 as cv
 import os
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from tqdm import tqdm
 

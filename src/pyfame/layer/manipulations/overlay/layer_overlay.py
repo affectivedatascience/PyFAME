@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo, NonNegativeInt, PositiveFloat
-from typing import Union, Tuple, Optional, Any
+from typing import Union, Optional, Any
 from pyfame.landmark.facial_landmarks import *
 from pyfame.landmark.blendshape_smoother import EyeBlendshapeSmoother
 from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
@@ -33,10 +33,16 @@ _OVERLAY_MAPPING = {
         "scale_factor": None
     },
     "teardrop_short_1": { # Update this with hard coded tear_left_cheek, tear_right_cheek
-        "path": _OVERLAY_DIR / "teardrops" / "teardrop_short_1.png",
+        "path": _OVERLAY_DIR / "teardrops" / "teardrop_1.png",
         "anchor_landmarks": (6, 356),
         "center_landmark": 348,
         "scale_factor": 0.2
+    },
+    "face_mask": {
+        "path": _OVERLAY_DIR / "face_mask.png",
+        "anchor_landmarks": (127, 356),
+        "center_landmark": 6,
+        "scale_factor": None
     }
 }
 
@@ -161,11 +167,11 @@ class OverlayParameters(BaseModel):
     ----------
     overlay_type : str or int
         The overlay to apply. Accepted string values are ``"sunglasses"``,
-        ``"glasses"``, ``"teardrop_short_1"``, and ``"pupils"``. Accepted
+        ``"glasses"``, ``"teardrop"``, ``"face_mask"``, and ``"pupils"``. Accepted
         integer values are ``43`` (sunglasses), ``44`` (glasses), ``45``
-        (teardrop_short_1), and ``46`` (pupils). A file path to a custom
-        overlay image may also be provided as a string. Integer inputs are
-        normalised to their string equivalents on validation.
+        (teardrop), ``46`` (face mask), and ``47`` (pupils). A file path to a 
+        custom overlay image may also be provided as a string. Integer inputs 
+        are normalised to their string equivalents on validation.
     overlay_scale_factor : float or None, optional
         An optional multiplier applied to the computed anchor distance when
         deriving the overlay scale. If ``None``, the scale factor defined
@@ -174,6 +180,10 @@ class OverlayParameters(BaseModel):
         A vertical pixel offset applied to the overlay's computed center
         position, allowing fine adjustment of placement along the vertical
         axis. May be negative.
+    x_offset : int
+        A horizontal pixel offset applied to the overlay's computed center
+        position, allowing fine adjustment of placement along the 
+        horizontal axis. May be negative.
     pupil_scale_factor : float
         The ratio of pupil diameter to eye canthal width, used to derive
         the pupil radius for the ``"pupils"`` overlay. Must lie in the
@@ -184,6 +194,7 @@ class OverlayParameters(BaseModel):
     overlay_type:Union[NonNegativeInt, str]
     overlay_scale_factor:Optional[float] = None
     y_offset:int
+    x_offset:int
     pupil_scale_factor:PositiveFloat
 
     @field_validator("overlay_type", mode="before")
@@ -193,7 +204,7 @@ class OverlayParameters(BaseModel):
 
         if isinstance(value, str):
             value = str.lower(value)
-            if value in {"sunglasses", "glasses", "teardrop_short_1", "pupils"}:
+            if value in {"sunglasses", "glasses", "teardrop", "face_mask", "pupils"}:
                 return value
             
             elif os.path.isfile(value):
@@ -202,10 +213,10 @@ class OverlayParameters(BaseModel):
             raise ValueError(f"Unrecognized value or invalid file path provided to parameter {field_name}.")
             
         elif isinstance(value, int):
-            if value not in {43,44,45,46}:
+            if value not in {43,44,45,46,47}:
                 raise ValueError(f"Unrecognized value for parameter {field_name}.")
             
-            mapping = {43: "sunglasses", 44:"glasses", 45:"teardrop_short_1", 46:"pupils "}
+            mapping = {43:"sunglasses", 44:"glasses", 45:"teardrop", 46:"face_mask", 47:"pupils"}
             return mapping.get(value)
         
         raise TypeError(f"Invalid type for parameter {field_name}. Expected int or str.")
@@ -225,7 +236,7 @@ class LayerOverlay(Layer):
     Manipulation layer that composites a pre-defined or custom overlay image
     onto a frame, aligned and scaled to follow the subject's facial geometry.
 
-    For image-based overlays (sunglasses, glasses, teardrops), the overlay
+    For image-based overlays (sunglasses, glasses, teardrops, masks), the overlay
     is loaded from disk on first use and cached for subsequent frames. It is
     scaled proportionally to the distance between a pair of anchor landmarks,
     rotated to match the estimated head roll angle, and alpha-blended onto the
@@ -261,6 +272,8 @@ class LayerOverlay(Layer):
         from anchor landmark distance.
     y_offset : int
         Vertical pixel offset applied to the overlay's computed center.
+    x_offset : int
+        Horizontal pixel offset applied to the overlay's computed center.
     pupil_scale_factor : float
         Ratio of pupil diameter to eye canthal width, used to derive
         pupil radius for the ``"pupils"`` overlay.
@@ -317,6 +330,7 @@ class LayerOverlay(Layer):
         self.overlay_type = self.overlay_params.overlay_type
         self.overlay_scale_factor = self.overlay_params.overlay_scale_factor
         self.y_offset = self.overlay_params.y_offset
+        self.x_offset = self.overlay_params.x_offset
         self.pupil_scale_factor = self.overlay_params.pupil_scale_factor
         
         # For eye related overlays
@@ -519,7 +533,7 @@ class LayerOverlay(Layer):
             overlay_mask = overlay[:,:,3] / 255.0
             overlay_mask = overlay_mask[:,:,np.newaxis]
 
-            x_pos = center_point[0] - padded_width//2
+            x_pos = center_point[0] - padded_width//2 + self.x_offset
             y_pos = center_point[1] - padded_height//2 + self.y_offset
 
             roi = frame[y_pos:y_pos + padded_height, x_pos:x_pos + padded_width]
@@ -530,7 +544,7 @@ class LayerOverlay(Layer):
         return overlayed_frame
         
 def layer_overlay(timing_configuration:TimingConfiguration | None = None, overlay_type:int|str = "sunglasses", 
-                  overlay_scale_factor:float | None = None, y_offset:int = 10, pupil_scale_factor:float = 0.25) -> LayerOverlay:
+                  overlay_scale_factor:float | None = None, y_offset:int = 10, x_offset:int = 0, pupil_scale_factor:float = 0.25) -> LayerOverlay:
     """
     Factory function for the overlay manipulation layer. `LayerOverlay`
     composites a pre-defined or custom overlay image onto a frame, aligned
@@ -547,10 +561,10 @@ def layer_overlay(timing_configuration:TimingConfiguration | None = None, overla
         offset at the video's duration.
     overlay_type : str or int, default="sunglasses"
         The overlay to apply. Accepted string values are ``"sunglasses"``,
-        ``"glasses"``, ``"teardrop_short_1"``, and ``"pupils"``. Accepted
-        integer values are ``43`` (sunglasses), ``44`` (glasses), ``45``
-        (teardrop_short_1), and ``46`` (pupils). A file path to a custom
-        BGRA overlay image may also be provided as a string.
+        ``"glasses"``, ``"teardrop"``, ``"face_mask"``, and ``"pupils"``. 
+        Accepted integer values are ``43`` (sunglasses), ``44`` (glasses), 
+        ``45`` (teardrop), ``46`` (face_mask), and ``47`` (pupils). A file path 
+        to a custom BGRA overlay image may also be provided as a string.
     overlay_scale_factor : float or None, default=None
         An optional multiplier applied to the anchor landmark distance when
         deriving the overlay scale. If ``None``, the scale factor defined
@@ -559,6 +573,10 @@ def layer_overlay(timing_configuration:TimingConfiguration | None = None, overla
         A vertical pixel offset applied to the overlay's computed center
         position. Positive values shift the overlay downward; negative
         values shift it upward.
+    x_offset : int, default=0
+        A horizontal pixel offset applied to the overlay's computed center
+        position. Positive values shift the overlay to the right; negative
+        values shift it to the left.
     pupil_scale_factor : float, default=0.25
         The ratio of pupil diameter to eye canthal width, used to derive
         pupil radius for the ``"pupils"`` overlay. Must lie in the
@@ -584,6 +602,7 @@ def layer_overlay(timing_configuration:TimingConfiguration | None = None, overla
             overlay_type=overlay_type,
             overlay_scale_factor=overlay_scale_factor, 
             y_offset = y_offset,
+            x_offset = x_offset,
             pupil_scale_factor=pupil_scale_factor
         )
         

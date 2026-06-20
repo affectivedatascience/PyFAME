@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError, PositiveFloat, NonNegativeInt
-from typing import Union, List, Tuple, Optional
+from typing import Union, List, Tuple
 from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
@@ -7,6 +7,7 @@ from pyfame.utils.constants import *
 import cv2 as cv
 import numpy as np
 from skimage.util import *
+from operator import itemgetter
 
 # Reimplement passing of idx_to_track list for precise landmark inclusion
 
@@ -276,30 +277,38 @@ class LayerStylisePointLight(Layer):
         else:
             output_img = np.zeros_like(frame, dtype=np.uint8)
 
-        included_idx = np.array([], dtype=np.uint8)
+        included_idx = []
 
         if isinstance(self.landmark_paths[0], list):
             for lm_path in self.landmark_paths:
                 lm_mask = mask_from_landmarks(frame, lm_path, landmarker_coordinates)
                 lm_mask = lm_mask.astype(bool)
+                height, width = lm_mask.shape
 
                 # Use the generated bool mask to get valid indicies
-                for id, lm in enumerate(landmarker_coordinates):
-                    x = lm[0]
-                    y = lm[1]
+                for id, (x, y) in enumerate(landmarker_coordinates):
+                    # Explicit bounds testing to handle face crossing frame boundaries
+                    if not (0 <= x < width and 0 <= y < height):
+                        continue
+
                     if lm_mask[y,x] == True:
-                        included_idx = np.append(included_idx, id)
+                        included_idx.append(id)
         else:
             lm_mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
             lm_mask = lm_mask.astype(bool)
+            height, width = lm_mask.shape
 
             # Use the generated bool mask to get valid indicies
-            for id, lm in enumerate(landmarker_coordinates):
-                x = lm[0]
-                y = lm[1]
+            for id, (x, y) in enumerate(landmarker_coordinates):
+                # Explicit bounds testing to handle face crossing frame boundaries
+                if not (0 <= x < width and 0 <= y < height):
+                    continue
+
                 if lm_mask[y,x] == True:
-                    included_idx = np.append(included_idx, id)
+                    included_idx.append(id)
         
+        included_idx = np.array(included_idx, dtype=np.uint8)
+
         if self.point_density != 1.0 and len(self.idx_to_display) == 0:
             # Pad and reshape idx array to slices of size 10
             new_lm_idx = included_idx.copy()
