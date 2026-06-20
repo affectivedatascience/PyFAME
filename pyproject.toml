@@ -1,6 +1,6 @@
 [build-system]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools", "wheel"]
 
 [project]
 name = "PyFAME"
@@ -12,7 +12,7 @@ description = "PyFAME: the Python Facial Analysis and Manipulation Environment"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE.txt" }
-keywords = ["pyfame", "occlusion", "masking", "coloring", "colouring", "psychology"]
+keywords = ["Facial Manipulation", "Vision", "Occlusion", "Masking", "Coloring", "Affective Computing"]
 dependencies = [
     "opencv-python >= 4.10.0.0",
     "mediapipe >= 0.10.20",
@@ -23,19 +23,6 @@ dependencies = [
     "matplotlib >= 3.10.0",
     "tqdm >= 4.67.0",
     "av >= 16.1.0"
-]
-
-[project.optional-dependencies]
-docs = [
-    "mkdocs >= 1.6",
-    "mkdocs-material >= 9.5",
-    "mkdocstrings[python] >= 0.25",
-    "mkdocs-api-autonav >= 0.3",
-]
-dev = [
-    "pyfame[docs]", 
-    "pytest >= 8.0.0",
-    "tox >= 4.24.0"
 ]
 
 classifiers = [
@@ -50,20 +37,31 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "mkdocs >= 1.6",
+    "mkdocs-material >= 9.5",
+    "mkdocstrings[python] >= 0.25",
+    "mkdocs-api-autonav >= 0.3",
+]
+dev = [
+    "pyfame[docs]",
+    "pytest >= 8.0.0",
+    "tox >= 4.24.0"
+]
+
 [project.urls]
-Homepage = "https://github.com/Gavin-Bosman/PyFAME"
+Homepage = "https://github.com/affectivedatascience/PyFAME"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["pyfame*"]
-exclude = ["processing_script.py"]
 
 [tool.setuptools.package-data]
+"pyfame" = ["py.typed"]
 "pyfame.schema" = ["*.json"]
-"pyfame.layer.manipulations.stylise.overlay_images" = ["*.png", "*.jpg"]
 "pyfame.models.mediapipe" = ["*.task"]
+"pyfame.layer.manipulations.overlay.overlay_images" = ["*.png", "*.jpg"]
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
