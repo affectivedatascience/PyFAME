@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PyFAME"
-version = "1.0.0"
+name = "Pyfame"
+version = "1.0.2"
 authors = [
     { name="Gavin Bosman", email="gavin.bosman12@gmail.com" },
 ]
@@ -15,14 +15,15 @@ license = { file = "LICENSE.txt" }
 keywords = ["Facial Manipulation", "Vision", "Occlusion", "Masking", "Coloring", "Affective Computing"]
 dependencies = [
     "opencv-python >= 4.10.0.0",
-    "mediapipe >= 0.10.20",
+    "mediapipe >= 0.10.20, < 0.11.0",
     "pandas >= 2.2.0",
     "numpy <= 2.0.0",
     "scikit-image >= 0.24.0",
     "pydantic >= 2.11.0",
     "matplotlib >= 3.10.0",
     "tqdm >= 4.67.0",
-    "av >= 16.1.0"
+    "av >= 16.1.0",
+    "jsonschema >= 4.0.0"
 ]
 
 classifiers = [

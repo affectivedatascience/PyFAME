@@ -52,8 +52,7 @@ class ColourMeansParameters(BaseModel):
         
         return value
 
-def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = COLOUR_SPACE_BGR, min_face_detection_confidence:float = 0.4, 
-                                min_face_presence_confidence:float = 0.7, min_tracking_confidence:float = 0.7, frame_step:int = 5) -> dict[str, pd.DataFrame]:
+def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = COLOUR_SPACE_BGR, frame_step:int = 5) -> dict[str, pd.DataFrame]:
     """Takes an input video file, and extracts colour channel means in the specified color space for the full-face, cheeks, nose and chin.
     Results are returned as a filename-keyed dictionary of colour mean results; this dict can be passed to analyse_to_disk to be saved locally as a JSON file.
 
@@ -65,21 +64,6 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
     
     colour_space : int, str
         A specifier for which color space to operate in. One of COLOR_SPACE_RGB, COLOR_SPACE_HSV or COLOR_SPACE_GRAYSCALE
-    
-    min_face_detection_confidence : float
-        A confidence parameter passed to the mediapipe FaceLandmarker instance.
-        Controls how confident the detection model needs to be to confirm a face is present in the frame.
-    
-    min_face_presence_confidence : float
-        A confidence parameter passed to the mediapipe FaceLandmarker instance.
-        Controls how confident the landmarker needs to be that the detected face is still present, 
-        if not it will attempt to re-detect the face.
-    
-    min_tracking_confidence : float
-        A confidence parameter passed to the mediapipe FaceLandmarker instance. 
-        Controls how confident the facial tracking model needs to be for the landmarker to 
-        continue using the current mesh layout. If this parameter fails, the landmarker will
-        transition back to facial detection.
     
     frame_step : int
         The number of frames between successive colour sampling. 
@@ -110,9 +94,6 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
     try:
         input_params = ColourMeansParameters(
             colour_space=colour_space,
-            min_face_detection_confidence=min_face_detection_confidence,
-            min_face_presence_confidence=min_face_presence_confidence,
-            min_tracking_confidence=min_tracking_confidence,
             frame_step=frame_step
         )
     except ValidationError as e:
@@ -121,11 +102,7 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
     colour_space = input_params.colour_space
     
     # Defining mediapipe facemesh task
-    face_landmarker = get_face_landmarker(
-        min_face_detection_confidence=min_face_detection_confidence,
-        min_face_presence_confidence=min_face_presence_confidence,
-        min_tracking_confidence=min_tracking_confidence
-    )
+    face_landmarker = get_face_landmarker()
 
     # Extracting the i/o paths from the file_paths dataframe
     absolute_paths = file_paths["Absolute Path"]
@@ -231,7 +208,7 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
                 continue
             
             # Get facial landmark set as screen coordinates
-            landmarker_coordinates, _ = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker)
+            landmarker_coordinates, _ = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, static_image_mode=True)
 
             # Creating masks
             cheeks_mask = mask_from_landmarks(frame, LANDMARK_BOTH_CHEEKS, landmarker_coordinates)

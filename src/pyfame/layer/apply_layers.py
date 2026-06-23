@@ -212,13 +212,13 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
                 frame = get_imread(file)
                 if frame is None:
                     break
-                landmark_coordinates, blendshapes = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker)
+                landmark_coordinates, blendshapes = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, static_image_mode=static_image_mode)
             else:
                 success, frame = capture.read()
                 if not success:
                     break
                 dt = capture.get(cv.CAP_PROP_POS_MSEC)
-                landmark_coordinates, blendshapes = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, dt)
+                landmark_coordinates, blendshapes = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, dt, static_image_mode)
                 
             pb.update(1)
 

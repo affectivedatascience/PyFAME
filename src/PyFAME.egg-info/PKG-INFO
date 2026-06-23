@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
-Name: PyFAME
-Version: 1.0.0
+Name: Pyfame
+Version: 1.0.2
 Summary: PyFAME: the Python Facial Analysis and Manipulation Environment
 Home-page: https://github.com/Gavin-Bosman/PyFAME
 Author: Gavin Bosman
@@ -694,7 +694,7 @@ Requires-Python: >=3.10
 Description-Content-Type: text/markdown
 License-File: LICENSE.txt
 Requires-Dist: opencv-python>=4.10.0.0
-Requires-Dist: mediapipe>=0.10.20
+Requires-Dist: mediapipe<0.11.0,>=0.10.20
 Requires-Dist: pandas>=2.2.0
 Requires-Dist: numpy<=2.0.0
 Requires-Dist: scikit-image>=0.24.0
@@ -702,6 +702,7 @@ Requires-Dist: pydantic>=2.11.0
 Requires-Dist: matplotlib>=3.10.0
 Requires-Dist: tqdm>=4.67.0
 Requires-Dist: av>=16.1.0
+Requires-Dist: jsonschema>=4.0.0
 Provides-Extra: docs
 Requires-Dist: mkdocs>=1.6; extra == "docs"
 Requires-Dist: mkdocs-material>=9.5; extra == "docs"

@@ -314,11 +314,11 @@ def analyse_optical_flow_sparse(file_paths:pd.DataFrame, landmark_idx_to_track:l
             
             success, frame = capture.read()
             if not success:
-                break    
+                break
             
             # Get the landmark screen coordinates
             frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            landmarker_coordinates, _ = get_pixel_coordinates(frame_rgb, face_landmarker)
+            landmarker_coordinates, _ = get_pixel_coordinates(frame_rgb, face_landmarker, static_image_mode=True)
             # Create face oval image mask
             face_mask = mask_from_landmarks(frame, LANDMARK_FACE_OVAL, landmarker_coordinates)
             output_img = frame.copy()

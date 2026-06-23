@@ -4,11 +4,11 @@ README.md
 pyproject.toml
 setup.cfg
 setup.py
-src/PyFAME.egg-info/PKG-INFO
-src/PyFAME.egg-info/SOURCES.txt
-src/PyFAME.egg-info/dependency_links.txt
-src/PyFAME.egg-info/requires.txt
-src/PyFAME.egg-info/top_level.txt
+src/Pyfame.egg-info/PKG-INFO
+src/Pyfame.egg-info/SOURCES.txt
+src/Pyfame.egg-info/dependency_links.txt
+src/Pyfame.egg-info/requires.txt
+src/Pyfame.egg-info/top_level.txt
 src/pyfame/__init__.py
 src/pyfame/py.typed
 src/pyfame/analyse/__init__.py
