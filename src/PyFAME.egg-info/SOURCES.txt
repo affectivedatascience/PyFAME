@@ -2,8 +2,6 @@ LICENSE.txt
 MANIFEST.in
 README.md
 pyproject.toml
-setup.cfg
-setup.py
 src/Pyfame.egg-info/PKG-INFO
 src/Pyfame.egg-info/SOURCES.txt
 src/Pyfame.egg-info/dependency_links.txt

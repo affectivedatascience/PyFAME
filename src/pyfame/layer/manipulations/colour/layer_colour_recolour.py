@@ -310,9 +310,9 @@ class LayerColourRecolour(Layer):
                 a = np.where(mask==255, a + delta, a)
 
                 if self.colour_left_sclera and left_eye_open:
-                    a = np.where(left_sclera_mask==255, a + (weight * self.magnitude), a)
+                    a = np.where(left_sclera_mask==255, a + delta, a)
                 if self.colour_right_sclera and right_eye_open:
-                    a = np.where(right_sclera_mask==255, a + (weight * self.magnitude), a)
+                    a = np.where(right_sclera_mask==255, a + delta, a)
 
                 a = np.clip(a, -128, 127)
 
@@ -321,9 +321,9 @@ class LayerColourRecolour(Layer):
                 b = np.where(mask==255, b - delta, b)
 
                 if self.colour_left_sclera and left_eye_open:
-                    b = np.where(left_sclera_mask==255, b - (weight * self.magnitude), b)
+                    b = np.where(left_sclera_mask==255, b - delta, b)
                 if self.colour_right_sclera and right_eye_open:
-                    b = np.where(right_sclera_mask==255, b - (weight * self.magnitude), b)
+                    b = np.where(right_sclera_mask==255, b - delta, b)
 
                 b = np.clip(b, -128, 127)
 
@@ -332,9 +332,9 @@ class LayerColourRecolour(Layer):
                 a = np.where(mask==255, a - delta, a)
 
                 if self.colour_left_sclera and left_eye_open:
-                    a = np.where(left_sclera_mask==255, a - (weight * self.magnitude), a)
+                    a = np.where(left_sclera_mask==255, a - delta, a)
                 if self.colour_right_sclera and right_eye_open:
-                    a = np.where(right_sclera_mask==255, a - (weight * self.magnitude), a)
+                    a = np.where(right_sclera_mask==255, a - delta, a)
 
                 a = np.clip(a, -128, 127)
 
@@ -343,9 +343,9 @@ class LayerColourRecolour(Layer):
                 b = np.where(mask==255, b + delta, b)
 
                 if self.colour_left_sclera and left_eye_open:
-                    b = np.where(left_sclera_mask==255, b + (weight * self.magnitude), b)
+                    b = np.where(left_sclera_mask==255, b + delta, b)
                 if self.colour_right_sclera and right_eye_open:
-                    b = np.where(right_sclera_mask==255, b + (weight * self.magnitude), b)
+                    b = np.where(right_sclera_mask==255, b + delta, b)
 
                 b = np.clip(b, -128, 127)
 

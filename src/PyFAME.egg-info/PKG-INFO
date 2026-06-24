@@ -1,9 +1,7 @@
 Metadata-Version: 2.4
 Name: Pyfame
-Version: 1.0.2
+Version: 1.0.3
 Summary: PyFAME: the Python Facial Analysis and Manipulation Environment
-Home-page: https://github.com/Gavin-Bosman/PyFAME
-Author: Gavin Bosman
 Author-email: Gavin Bosman <gavin.bosman12@gmail.com>
 License:                      GNU GENERAL PUBLIC LICENSE
                                Version 3, 29 June 2007
@@ -720,14 +718,14 @@ Dynamic: license-file
 ![Docs](https://github.com/Gavin-Bosman/PyFAME/actions/workflows/deploy.yml/badge.svg)
 
 # PyFAME: the Python Facial Analysis and Manipulation Environment
-<img src="./docs_depricated/src/public/pyfame_logo.png" width=300 />
+<img src="https://raw.githubusercontent.com/affectivedatascience/PyFAME/master/docs_depricated/src/public/pyfame_logo.png" width=300 />
 
 PyFAME is a python package for dynamic region occlusion and skin colour modification of faces in video and images. Provides a range of tools for changing the colour of user-specified facial regions using industry-standard colour spaces (L*a*b, HSV, BGR), occlusion of user-defined facial regions (e.g., eyes, nose, mouth, hemi-face), and isolation of the head from background scene through video matting. Facial modifications can be further transitioned on and off through a range of timing functions (e.g., linear, sigmoid, Gaussian etc).
 
 PyFAME enables researchers to apply complex facial manipulations to just the face in dynamic video and still images scenes in several lines of code.
 Here is an example of PyFAME performing pixel-level modifications to create new videos from the original one:
 
-<img src="./docs_depricated/docsite/output_grid.png" width=400/>
+<img src="https://raw.githubusercontent.com/affectivedatascience/PyFAME/master/docs_depricated/src/public/output_grid.png" width=400/>
 
 ## Statement of Need
 
