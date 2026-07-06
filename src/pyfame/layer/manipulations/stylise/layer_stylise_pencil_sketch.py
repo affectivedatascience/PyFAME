@@ -3,7 +3,7 @@ from typing import Union, List, Tuple, Optional
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask.mask_from_landmarks import mask_from_landmarks
 from pyfame.landmark.facial_landmarks import *
-from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
+from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
 import cv2 as cv
 import numpy as np
 from operator import itemgetter
@@ -283,7 +283,7 @@ class LayerStylisePencilSketch(Layer):
             return frame
         
         # Compute facial width for filter scaling downstream
-        fo_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_FACE_OVAL)
+        fo_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_FACE_OVAL)
 
         min_x = min(fo_coords, key=itemgetter(0))[0]
         max_x = max(fo_coords, key=itemgetter(0))[0]

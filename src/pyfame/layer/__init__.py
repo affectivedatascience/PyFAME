@@ -5,7 +5,7 @@ from .timing_curves import (timing_constant, timing_linear, timing_gaussian, tim
 
 import pyfame.layer.manipulations as manipulations
 from .manipulations import *
-# from .manipulations import __all__ as m__all__
+from .manipulations import __all__ as _manip_all_
 
 
 __all__ = [
@@ -15,6 +15,4 @@ __all__ = [
     "timing_linear", 
     "timing_gaussian", 
     "timing_sigmoid",
-    "manipulations"
-]
-# + m__all__
+] + _manip_all_

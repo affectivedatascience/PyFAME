@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Pyfame"
-version = "1.0.3"
+version = "1.0.4"
 authors = [
     { name="Gavin Bosman", email="gavin.bosman12@gmail.com" },
 ]

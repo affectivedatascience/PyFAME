@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo, NonNegativeInt, PositiveFloat, PositiveInt
 from typing import Optional, List, Tuple, Any
-from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_pixel_coordinates
+from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_landmarker_coordinates
 from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.file_access import get_video_capture, get_video_writer
@@ -318,7 +318,7 @@ def analyse_optical_flow_sparse(file_paths:pd.DataFrame, landmark_idx_to_track:l
             
             # Get the landmark screen coordinates
             frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            landmarker_coordinates, _ = get_pixel_coordinates(frame_rgb, face_landmarker, static_image_mode=True)
+            landmarker_coordinates = get_landmarker_coordinates(frame_rgb, face_landmarker, None, True, False)
             # Create face oval image mask
             face_mask = mask_from_landmarks(frame, LANDMARK_FACE_OVAL, landmarker_coordinates)
             output_img = frame.copy()

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError, PositiveInt, NonNegativeFloat
 from typing import Union, Optional, List, Tuple
 from pyfame.landmark.facial_landmarks import *
-from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
+from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.utils.constants import * 
@@ -26,8 +26,8 @@ class GridShuffleParameters(BaseModel):
         generator is seeded non-deterministically.
     shuffle_method : str or int
         The shuffling algorithm to apply. Accepted string values are
-        ``"random"`` and ``"cyclic shift"``. Accepted integer values are
-        ``27`` (random) and ``28`` (cyclic shift). String inputs are
+        ``"random"``, ``"cyclic shift"`` and ``"none"``. Accepted integer values are
+        ``27`` (random), ``28`` (cyclic shift) and ``48`` (none). String inputs are
         normalised to lowercase on validation.
     grid_square_size : int
         The baseline side length in pixels of each grid square at the
@@ -40,7 +40,7 @@ class GridShuffleParameters(BaseModel):
     cyclic_shift_amount : int
         The number of positions by which active grid square indices are
         rotated in the ``"cyclic shift"`` shuffle method. Must be a
-        positive integer. Ignored by the ``"random"`` method.
+        positive integer. Ignored by other shuffle methods.
     landmark_paths : list of list of tuple of int or list of tuple of int
         A list of one or more closed landmark paths representing the
         region in which the grid shuffle will be applied.
@@ -57,16 +57,16 @@ class GridShuffleParameters(BaseModel):
     @classmethod
     def check_accepted_value(cls, value, info:ValidationInfo):
         field_name = info.field_name
-        shuffle_method_map = {27:"random", 28:"cyclic-shift"}
+        shuffle_method_map = {27:"random", 28:"cyclic-shift", 48:"none"}
 
         if isinstance(value, str):
             value = str.lower(value)
-            if value not in {"random", "cyclic shift"}:
+            if value not in {"random", "cyclic shift", "none"}:
                 raise ValueError(f"Unrecognized value for parameter {field_name}.")
             return value
         
         elif isinstance(value, int):
-            if value not in {27, 28}:
+            if value not in {27, 28, 48}:
                 raise ValueError(f"Unrecognized value for parameter {field_name}.")
             return shuffle_method_map.get(value)
 
@@ -127,7 +127,7 @@ class LayerSpatialGridShuffle(Layer):
         Seed for the random number generator. If ``None``, permutations
         are non-deterministic across runs.
     shuffle_method : str or int
-        The shuffling algorithm to apply (``"random"`` or ``"cyclic shift"``).
+        The shuffling algorithm to apply (``"random"``, ``"cyclic shift"`` or ``"none"``).
     grid_square_size : int
         Baseline side length in pixels of each grid square at the reference
         face width.
@@ -352,6 +352,9 @@ class LayerSpatialGridShuffle(Layer):
         elif self.shuffle_method == "cyclic shift":
             # Rotate the index list by shift_amount positions.
             permutation = np.roll(active_indices, self.shift_amount)
+        
+        else:
+            return active_indices
 
         return permutation.tolist()
     
@@ -415,7 +418,7 @@ class LayerSpatialGridShuffle(Layer):
         if weight == 0.0:
             return frame
 
-        fo_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_FACE_OVAL)
+        fo_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_FACE_OVAL)
         output_frame = np.zeros((frame.shape[0], frame.shape[1], frame.shape[2]), dtype=np.uint8)
 
         # Compute centroid of masked region for later grid overlay
@@ -649,8 +652,8 @@ def layer_spatial_grid_shuffle(timing_configuration:TimingConfiguration | None =
         permutations are non-deterministic.
     shuffle_method : str or int, default="random"
         The shuffling algorithm to apply. Accepted string values are
-        ``"random"`` and ``"cyclic shift"``. Accepted integer values are
-        ``27`` (random) and ``28`` (cyclic shift).
+        ``"random"``, ``"cyclic shift"`` and ``"none"``. Accepted integer values are
+        ``27`` (random), ``28`` (cyclic shift) and ``48`` (none).
     grid_square_size : int, default=40
         The baseline side length in pixels of each grid square at the
         reference face width. Must be a positive integer.

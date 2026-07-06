@@ -4,8 +4,6 @@ from .file_access_directories import contains_sub_directories, create_output_dir
 from .file_access_imread import get_imread
 from .file_access_video_capture import get_video_capture
 from .file_access_video_writer import get_video_writer
-from .analysis_to_disk import analysis_to_disk
-
 from .conversion import *
 import pyfame.file_access.conversion as conversion
 
@@ -20,7 +18,6 @@ __all__ = [
     "get_video_capture", 
     "get_video_writer", 
     "get_sub_directories_relative_to_path",
-    "analysis_to_disk",
     "conversion"
 ] 
 #__all__.extend(conversion.__all__)

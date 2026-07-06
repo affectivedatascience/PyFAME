@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ValidationError, ValidationInfo, field_validator, PositiveInt
 from typing import Optional, Tuple, Dict
 from pyfame.landmark.facial_landmarks import *
-from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
+from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.layer.manipulations.spatial.face_anchors import FaceAnchor
@@ -380,11 +380,11 @@ class LayerSpatialLandmarkRelocate(Layer):
 
         # Get the pixel coordinates of various landmark regions
         landmark_nose_wide = create_landmark_path(NOSE_WIDE_IDX)
-        le_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_EYE_REGION)
-        re_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_EYE_REGION)
-        nose_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, landmark_nose_wide)
-        lips_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_MOUTH_REGION)
-        fo_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_FACE_OVAL)
+        le_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_EYE_REGION)
+        re_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_EYE_REGION)
+        nose_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, landmark_nose_wide)
+        lips_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_MOUTH_REGION)
+        fo_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_FACE_OVAL)
 
         # Creating boolean masks of each landmark region
         le_mask = mask_from_landmarks(frame, LANDMARK_LEFT_EYE_REGION, landmarker_coordinates)

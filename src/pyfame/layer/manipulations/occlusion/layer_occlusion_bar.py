@@ -4,7 +4,7 @@ from pyfame.utils.general_utilities import compute_rotation_angle, compute_slope
 from pyfame.utils.constants import *
 from pyfame.layer.layer import Layer, TimingConfiguration
 from pyfame.landmark.facial_landmarks import *
-from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
+from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
 import cv2 as cv
 import numpy as np
 
@@ -298,7 +298,7 @@ class LayerOcclusionBar(Layer):
         
         h,w = frame.shape[:2]
         # Replace placeholder concave path with its convex sub-paths
-        roi_coordinates = get_pixel_coordinates_from_landmark(landmarker_coordinates, self.landmark_paths)
+        roi_coordinates = get_relative_landmark_coordinates(landmarker_coordinates, self.landmark_paths)
         roi_arr = np.array(roi_coordinates, dtype=int)
 
         if self.min_x_lm_id == -1 or self.max_x_lm_id == -1 or self.min_y_lm_id == -1 or self.max_y_lm_id == -1:

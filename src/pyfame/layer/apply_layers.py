@@ -5,7 +5,7 @@ from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.layer import Layer
 from pyfame.layer.layer_pipeline import LayerPipeline
 from pyfame.logging.write_experiment_log import write_experiment_log
-from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_pixel_coordinates
+from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_landmarker_coordinates
 import cv2 as cv
 import os
 import pandas as pd
@@ -212,13 +212,13 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
                 frame = get_imread(file)
                 if frame is None:
                     break
-                landmark_coordinates, blendshapes = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, static_image_mode=static_image_mode)
+                landmark_coordinates, blendshapes = get_landmarker_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, None, static_image_mode, True)
             else:
                 success, frame = capture.read()
                 if not success:
                     break
                 dt = capture.get(cv.CAP_PROP_POS_MSEC)
-                landmark_coordinates, blendshapes = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, dt, static_image_mode)
+                landmark_coordinates, blendshapes = get_landmarker_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, dt, static_image_mode, True)
                 
             pb.update(1)
 

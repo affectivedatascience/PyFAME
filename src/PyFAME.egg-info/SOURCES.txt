@@ -14,8 +14,8 @@ src/pyfame/analyse/_optical_flow_utils.py
 src/pyfame/analyse/analyse_facial_colour_means.py
 src/pyfame/analyse/analyse_optical_flow_dense.py
 src/pyfame/analyse/analyse_optical_flow_sparse.py
+src/pyfame/analyse/analysis_to_disk.py
 src/pyfame/file_access/__init__.py
-src/pyfame/file_access/analysis_to_disk.py
 src/pyfame/file_access/checks.py
 src/pyfame/file_access/file_access_directories.py
 src/pyfame/file_access/file_access_imread.py

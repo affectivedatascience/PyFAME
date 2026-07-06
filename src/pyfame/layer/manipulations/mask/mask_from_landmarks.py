@@ -1,5 +1,5 @@
 from pyfame.utils.constants import *
-from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
+from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
 from pyfame.landmark.facial_landmarks import *
 from pyfame.utils.exceptions import *
 import cv2 as cv
@@ -29,19 +29,19 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
     masked_frame = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
 
     # Extracting all of the relevant landmark pixel coordinates
-    lc_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_CHEEK)
-    rc_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_CHEEK)
-    chin_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_CHIN)
-    nose_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_NOSE)
-    nose_wide_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, create_landmark_path(NOSE_WIDE_IDX))
-    ler_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_EYE_REGION)
-    rer_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_EYE_REGION)
-    le_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_EYE)
-    re_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_EYE)
-    li_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_IRIS)
-    ri_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_IRIS)
-    lips_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_MOUTH_REGION)
-    fo_screen_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_FACE_OVAL)
+    lc_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_CHEEK)
+    rc_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_CHEEK)
+    chin_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_CHIN)
+    nose_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_NOSE)
+    nose_wide_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, create_landmark_path(NOSE_WIDE_IDX))
+    ler_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_EYE_REGION)
+    rer_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_EYE_REGION)
+    le_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_EYE)
+    re_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_EYE)
+    li_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_IRIS)
+    ri_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_IRIS)
+    lips_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_MOUTH_REGION)
+    fo_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_FACE_OVAL)
 
     if isinstance(landmark_paths[0], list):
         for path in landmark_paths:
@@ -190,7 +190,7 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                     masked_frame[ri_mask] = 255
 
                 case _:
-                    cur_landmark_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, path)
+                    cur_landmark_coords = get_relative_landmark_coordinates(landmarker_coordinates, path)
 
                     # Creating boolean masks for the facial landmarks 
                     bool_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
@@ -344,7 +344,7 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                 masked_frame[ri_mask] = 255
 
             case _:
-                cur_landmark_coords = get_pixel_coordinates_from_landmark(landmarker_coordinates, landmark_paths)
+                cur_landmark_coords = get_relative_landmark_coordinates(landmarker_coordinates, landmark_paths)
 
                 # Creating boolean masks for the facial landmarks 
                 bool_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)

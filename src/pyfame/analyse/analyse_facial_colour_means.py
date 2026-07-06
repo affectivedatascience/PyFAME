@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo, PositiveFloat, PositiveInt
 from typing import Union
-from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_pixel_coordinates
+from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_landmarker_coordinates
 from pyfame.landmark.facial_landmarks import *
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.file_access import get_video_capture, create_output_directory
@@ -208,7 +208,7 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
                 continue
             
             # Get facial landmark set as screen coordinates
-            landmarker_coordinates, _ = get_pixel_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, static_image_mode=True)
+            landmarker_coordinates = get_landmarker_coordinates(cv.cvtColor(frame, cv.COLOR_BGR2RGB), face_landmarker, None, True, False)
 
             # Creating masks
             cheeks_mask = mask_from_landmarks(frame, LANDMARK_BOTH_CHEEKS, landmarker_coordinates)

@@ -2,7 +2,7 @@ from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo
 from typing import Union, Optional, Any
 from pyfame.landmark.facial_landmarks import *
 from pyfame.landmark.blendshape_smoother import EyeBlendshapeSmoother
-from pyfame.landmark.get_landmark_coordinates import get_pixel_coordinates_from_landmark
+from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
 from pyfame.file_access import *
 from pyfame.utils import compute_rotation_angle, compute_slope
 from pyfame.layer.layer import Layer, TimingConfiguration
@@ -436,8 +436,8 @@ class LayerOverlay(Layer):
 
         if self.overlay_type == "pupils":
 
-            left_iris_arr = np.array(get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_LEFT_IRIS))
-            right_iris_arr = np.array(get_pixel_coordinates_from_landmark(landmarker_coordinates, LANDMARK_RIGHT_IRIS))
+            left_iris_arr = np.array(get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_IRIS))
+            right_iris_arr = np.array(get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_IRIS))
 
             li_xs = left_iris_arr[:, 0]
             li_ys = left_iris_arr[:, 1]

@@ -36,7 +36,8 @@ def get_face_landmarker(running_mode:str = "image", num_faces:int = 1, min_face_
 
     return detector
                                                                                                                    
-def get_pixel_coordinates(frame_rgb:cv.typing.MatLike, face_landmarker:Any, timestamp_msec:float | None = None, static_image_mode:bool = False) -> tuple[list[tuple[int,int]], list[Any] | None]:
+def get_landmarker_coordinates(frame_rgb:cv.typing.MatLike, face_landmarker:Any, timestamp_msec:float | None = None, 
+                          static_image_mode:bool = False, return_blendshapes:bool = False) -> tuple[list[tuple[int,int]], list[Any] | None] | list[tuple[int,int]]:
     
     # Save the orignal dimensions for determining padding
     original_h, original_w = frame_rgb.shape[:2]
@@ -81,11 +82,14 @@ def get_pixel_coordinates(frame_rgb:cv.typing.MatLike, face_landmarker:Any, time
     else:
         raise FaceNotFoundError()
     
-    if lm_results.face_blendshapes:
-        return (pixel_coords, lm_results.face_blendshapes[0])
-    return (pixel_coords, None)
+    if return_blendshapes:
+        if lm_results.face_blendshapes:
+            return (pixel_coords, lm_results.face_blendshapes[0])
+        return (pixel_coords, None)
+    else:
+        return pixel_coords
 
-def get_pixel_coordinates_from_landmark(landmarker_coordinates:Any, landmark_path:list[tuple]) -> list[tuple[int,int]]:
+def get_relative_landmark_coordinates(landmarker_coordinates:Any, landmark_path:list[tuple]) -> list[tuple[int,int]]:
     path_screen_coords = []
 
     if landmark_path in CONCAVE_LANDMARKS:
@@ -155,4 +159,4 @@ def get_concave_landmark_coordinates(concave_path) -> list[tuple[int,int]]:
     
     return output_path
 
-__all__ = ["get_face_landmarker", "get_pixel_coordinates", "get_pixel_coordinates_from_landmark", "get_concave_landmark_coordinates"]
+__all__ = ["get_face_landmarker", "get_landmarker_coordinates", "get_relative_landmark_coordinates", "get_concave_landmark_coordinates"]
