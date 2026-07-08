@@ -1,4 +1,3 @@
-![Tests](https://github.com/Gavin-Bosman/PyFAME/actions/workflows/tests.yml/badge.svg)
 ![Docs](https://github.com/Gavin-Bosman/PyFAME/actions/workflows/deploy.yml/badge.svg)
 
 # PyFAME: the Python Facial Analysis and Manipulation Environment

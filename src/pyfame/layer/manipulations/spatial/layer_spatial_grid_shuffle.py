@@ -33,6 +33,11 @@ class GridShuffleParameters(BaseModel):
         The baseline side length in pixels of each grid square at the
         reference face width. Must be a positive integer. The effective
         square size is scaled per-frame to follow changes in face size.
+    grid_dimensions : tuple of int
+        An override to grid_square_size, infers the size of the individual
+        cells to fit into the specified grid dimensions. Must be a tuple 
+        of positive integers. The effective square size is scaled per-frame
+        to follow changes in face size.
     mask_overlap_threshold : float
         The minimum fraction of a grid square's pixels that must lie
         within the landmark mask for that square to be considered active
@@ -49,6 +54,7 @@ class GridShuffleParameters(BaseModel):
     random_seed:Optional[int]
     shuffle_method:Union[int,str]
     grid_square_size:PositiveInt
+    grid_dimensions:Optional[tuple[int,int]]
     mask_overlap_threshold:NonNegativeFloat
     cyclic_shift_amount:PositiveInt
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
@@ -131,6 +137,9 @@ class LayerSpatialGridShuffle(Layer):
     grid_square_size : int
         Baseline side length in pixels of each grid square at the reference
         face width.
+    grid_dimensions : tuple of int
+        An override to grid_square_size, infers the size of the individual
+        cells to fit into the specified grid dimensions.
     overlap_threshold : float
         Minimum fraction of a grid square that must overlap the landmark
         mask for it to be included in the shuffle.
@@ -215,6 +224,7 @@ class LayerSpatialGridShuffle(Layer):
         self.rand_seed = self.shuffle_params.random_seed
         self.shuffle_method = self.shuffle_params.shuffle_method
         self.grid_square_size = self.shuffle_params.grid_square_size
+        self.grid_dimensions = self.shuffle_params.grid_dimensions
         self.overlap_threshold = self.shuffle_params.mask_overlap_threshold
         self.shift_amount = self.shuffle_params.cyclic_shift_amount
         self.landmark_paths = self.shuffle_params.landmark_paths
@@ -448,29 +458,43 @@ class LayerSpatialGridShuffle(Layer):
 
         # Compute padding and add equally to both sides
         if self.baseline_x_pad is None or self.baseline_y_pad is None:
-            self.baseline_x_pad = self.grid_square_size - (face_width % self.grid_square_size)
-            self.baseline_y_pad = self.grid_square_size - (face_height % self.grid_square_size)
+            if self.grid_dimensions is not None:
+                # Dimensions override: derive square size from specified cols/rows
+                self.baseline_cols, self.baseline_rows = self.grid_dimensions
+                square_size_from_cols = face_width  // self.baseline_cols
+                square_size_from_rows = face_height // self.baseline_rows
 
-            if self.baseline_x_pad % 2 !=0:
-                min_x -= int(np.floor(self.baseline_x_pad/2))
-                max_x += int(np.ceil(self.baseline_x_pad/2))
+                # Use the smaller of the two to ensure squares fit in both axes
+                derived_square_size = min(square_size_from_cols, square_size_from_rows)
+                self.grid_square_size = derived_square_size
+
+                # Recompute padding with the derived square size
+                self.baseline_x_pad = self.grid_square_size - (face_width  % self.grid_square_size)
+                self.baseline_y_pad = self.grid_square_size - (face_height % self.grid_square_size)
             else:
-                min_x -= int(self.baseline_x_pad/2)
-                max_x += int(self.baseline_x_pad/2)
-            
-            if self.baseline_y_pad % 2 !=0:
-                min_y -= int(np.floor(self.baseline_y_pad/2))
-                max_y += int(np.ceil(self.baseline_y_pad/2))
-            else:
-                min_y -= int(self.baseline_y_pad/2)
-                max_y += int(self.baseline_y_pad/2)
+                self.baseline_x_pad = self.grid_square_size - (face_width % self.grid_square_size)
+                self.baseline_y_pad = self.grid_square_size - (face_height % self.grid_square_size)
 
-            self.baseline_padded_width = max_x - min_x
-            self.baseline_padded_height = max_y - min_y
+                if self.baseline_x_pad % 2 !=0:
+                    min_x -= int(np.floor(self.baseline_x_pad/2))
+                    max_x += int(np.ceil(self.baseline_x_pad/2))
+                else:
+                    min_x -= int(self.baseline_x_pad/2)
+                    max_x += int(self.baseline_x_pad/2)
+                
+                if self.baseline_y_pad % 2 !=0:
+                    min_y -= int(np.floor(self.baseline_y_pad/2))
+                    max_y += int(np.ceil(self.baseline_y_pad/2))
+                else:
+                    min_y -= int(self.baseline_y_pad/2)
+                    max_y += int(self.baseline_y_pad/2)
 
-            # Fix the number of cols throughout processing
-            self.baseline_cols = int(self.baseline_padded_width / self.grid_square_size)
-            self.baseline_rows = int(self.baseline_padded_height / self.grid_square_size)
+                self.baseline_padded_width = max_x - min_x
+                self.baseline_padded_height = max_y - min_y
+
+                # Fix the number of cols throughout processing
+                self.baseline_cols = int(self.baseline_padded_width / self.grid_square_size)
+                self.baseline_rows = int(self.baseline_padded_height / self.grid_square_size)
         
         scale_factor = face_width / self.baseline_face_width
         square_size = int(np.ceil(scale_factor * self.grid_square_size))
@@ -625,7 +649,8 @@ class LayerSpatialGridShuffle(Layer):
         return final_output
         
 def layer_spatial_grid_shuffle(timing_configuration:TimingConfiguration | None = None, random_seed:int|None = None, shuffle_method:int|str = "random", 
-                               grid_square_size:int = 40, mask_overlap_threshold:float = 0.5, cyclic_shift_amount:int = 1, landmark_paths:List[List[Tuple[int,int]]] | List[Tuple[int,int]] = LANDMARK_FACE_OVAL) -> LayerSpatialGridShuffle:
+                               grid_square_size:int = 40, grid_dimensions:tuple[int,int] | None = None, mask_overlap_threshold:float = 0.5, 
+                               cyclic_shift_amount:int = 1, landmark_paths:List[List[Tuple[int,int]]] | List[Tuple[int,int]] = LANDMARK_FACE_OVAL) -> LayerSpatialGridShuffle:
     """
     Factory function for the grid shuffle spatial manipulation layer.
     `LayerSpatialGridShuffle` partitions a landmark-defined facial region
@@ -657,6 +682,11 @@ def layer_spatial_grid_shuffle(timing_configuration:TimingConfiguration | None =
     grid_square_size : int, default=40
         The baseline side length in pixels of each grid square at the
         reference face width. Must be a positive integer.
+    grid_dimensions : tuple of int
+        An override to grid_square_size, infers the size of the individual
+        cells to fit into the specified grid dimensions. Must be a tuple 
+        of positive integers. The effective square size is scaled per-frame
+        to follow changes in face size.
     mask_overlap_threshold : float, default=0.5
         The minimum fraction of a grid square's pixels that must lie within
         the landmark mask for it to be included in the shuffle. Must lie in
@@ -688,6 +718,7 @@ def layer_spatial_grid_shuffle(timing_configuration:TimingConfiguration | None =
             random_seed=random_seed, 
             shuffle_method=shuffle_method,
             grid_square_size=grid_square_size,
+            grid_dimensions=grid_dimensions,
             mask_overlap_threshold=mask_overlap_threshold,
             cyclic_shift_amount=cyclic_shift_amount,
             landmark_paths=landmark_paths

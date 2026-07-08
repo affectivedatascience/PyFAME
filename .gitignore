@@ -8,3 +8,4 @@ docs_depricated/.vitepress/cache
 scripts/
 tests/__pycache__/
 venv311/
+build.ps1

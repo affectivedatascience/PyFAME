@@ -15,14 +15,13 @@ import pyfame.logging as logging
 from pyfame.analyse import *
 from pyfame.landmark import *
 from pyfame.layer import *
+from pyfame.file_access import make_paths
 
 from pyfame.analyse import __all__ as _analyse_all
 from pyfame.landmark import __all__ as _landmark_all
 from pyfame.layer import __all__ as _layer_all
 
 __all__ = (
-    ["analyse", "file_access", "landmark", "layer", "utils", "logging"]
+    ["analyse", "file_access", "landmark", "layer", "utils", "logging", "make_paths"]
     + _analyse_all + _landmark_all + _layer_all
 )
-
-#list(analyse.__all__) + list(file_access.__all__) + list(landmark.__all__) + list(layer.__all__) + list(utils.__all__) + list(logging.__all__)
