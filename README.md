@@ -1,4 +1,6 @@
 ![Docs](https://github.com/Gavin-Bosman/PyFAME/actions/workflows/deploy.yml/badge.svg)
+![PyPI Version](https://img.shields.io/pypi/v/Pyfame)
+
 
 # PyFAME: the Python Facial Analysis and Manipulation Environment
 <img src="https://raw.githubusercontent.com/affectivedatascience/PyFAME/master/docs_depricated/src/public/pyfame_logo.png" width=300 />

@@ -7,8 +7,6 @@ from pyfame.utils.constants import *
 import cv2 as cv
 import numpy as np
 from skimage.util import *
-from operator import itemgetter
-
 # Reimplement passing of idx_to_track list for precise landmark inclusion
 
 class PointLightParameters(BaseModel):

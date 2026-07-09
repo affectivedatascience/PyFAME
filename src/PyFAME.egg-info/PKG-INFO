@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: Pyfame
-Version: 1.0.4
+Version: 1.0.5
 Summary: PyFAME: the Python Facial Analysis and Manipulation Environment
 Author-email: Gavin Bosman <gavin.bosman12@gmail.com>
 License:                      GNU GENERAL PUBLIC LICENSE
@@ -714,7 +714,6 @@ Requires-Dist: build; extra == "dev"
 Requires-Dist: twine; extra == "dev"
 Dynamic: license-file
 
-![Tests](https://github.com/Gavin-Bosman/PyFAME/actions/workflows/tests.yml/badge.svg)
 ![Docs](https://github.com/Gavin-Bosman/PyFAME/actions/workflows/deploy.yml/badge.svg)
 
 # PyFAME: the Python Facial Analysis and Manipulation Environment
