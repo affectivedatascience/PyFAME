@@ -25,19 +25,34 @@ class BrightnessParameters(BaseModel):
         Used as an additive factor to increase the global intensity of a frame
         or image. Accepts values in the range [-25.0, 25.0]. Magnitudes outside
         of this range tend to cause artifacts in the resulting image.
+    brightness_scale : str
+        The method by which the brightness is scaled. `relative` indicates
+        the scaled brightness range begins relative to the provided image or 
+        video frame, where `absolute` indicates the brightness is scaled to
+        the full 0-255 range.
     """
 
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
     magnitude:float
+    brightness_scale:str
 
     @field_validator("magnitude")
     @classmethod
     def check_value_range(cls, value, info:ValidationInfo):
         field_name = info.field_name
-        if not (-25.0 <= value <= 25.0):
-            raise ValueError(f"{field_name} must lie between -25.0 and 25.0.")
+        if not (-100.0 <= value <= 100.0):
+            raise ValueError(f"{field_name} must lie in the range [-100,100].")
         
         return value
+
+    @field_validator("brightness_scale")
+    @classmethod
+    def check_accepted_values(cls, value, info:ValidationInfo):
+        field_name = info.field_name
+        if str.lower(value) not in {"relative", "absolute"}:
+            raise ValueError(f"{field_name} must be one of `relative` or `absolute`.")
+
+        return str.lower(value)
 
 class LayerColourBrightness(Layer):
     """
@@ -72,6 +87,11 @@ class LayerColourBrightness(Layer):
         Used as an additive factor to increase the global intensity of a frame
         or image. Accepts values in the range [-25.0, 25.0]. Magnitudes outside
         of this range tend to cause artifacts in the resulting image.
+    brightness_scale : str
+        The method by which the brightness is scaled. `relative` indicates
+        the scaled brightness range begins relative to the provided image or 
+        video frame, where `absolute` indicates the brightness is scaled to
+        the full 0-255 range.
 
     Notes
     -----
@@ -110,6 +130,9 @@ class LayerColourBrightness(Layer):
         # Define class parameters
         self.landmark_paths = self.bright_params.landmark_paths
         self.magnitude = self.bright_params.magnitude
+        self.brightness_scale = self.bright_params.brightness_scale
+        self.has_brightness_been_sampled = False
+        self.relative_shift_amount = 0.0
 
         # Snapshot of initial state
         self._snapshot_state()
@@ -196,14 +219,31 @@ class LayerColourBrightness(Layer):
         foreground = cv.bitwise_or(thresholded, floodfilled)
 
         # Reshape the mask for compatibility with cv2.convertScaleAbs()
-        mask = np.reshape(mask, (mask.shape[0], mask.shape[1], 1))
+        # mask = np.reshape(mask, (mask.shape[0], mask.shape[1], 1))
+        frame_hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV).astype(np.float32)
+        h,s,v = cv.split(frame_hsv)
 
-        # Within the masked region, upscale the brightness according to the current weight
-        img_brightened = np.where(mask == 255, cv.convertScaleAbs(src=frame, alpha=1, beta=(weight * self.magnitude)), frame)
+        if not self.has_brightness_been_sampled:
+            v_mu = np.mean(v, where=mask.astype(bool))
+            relative_range = 255.0 - v_mu
+            self.relative_shift_amount = (self.magnitude * relative_range) / 100.0
+            self.has_brightness_been_sampled = True
+
+        if self.brightness_scale == "relative":
+            v = np.where(mask == 255, v + (weight * self.relative_shift_amount), v)
+            v = np.clip(v, 0, 255)
+        else:
+            shift_amount = (self.magnitude * 255.0) / 100
+            v = np.where(mask == 255, v + (weight * shift_amount), v)
+            v = np.clip(v, 0, 255)
+
+        final_img_hsv = cv.merge([h,s,v])
+        img_brightened = cv.cvtColor(final_img_hsv.astype(np.uint8), cv.COLOR_HSV2BGR)
         img_brightened[foreground == 0] = frame[foreground == 0]
         return img_brightened
 
-def layer_colour_brightness(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, magnitude:float = 20.0) -> LayerColourBrightness:
+def layer_colour_brightness(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, 
+                            magnitude:float = 15.0, brightness_scale:str = "relative") -> LayerColourBrightness:
     """
     Factory function for the brightness manipulation layer.
 
@@ -213,7 +253,7 @@ def layer_colour_brightness(timing_configuration:TimingConfiguration | None = No
         A pydantic model containing timing configurations controlling onset, 
         offset, rise/fall durations, and weighting curves. If `None`, a 
         default `TimingConfiguration` is instantiated. The default 
-        instantiation assumes a linear rise and fall transition, onset at 
+        instantiation assumes a constant rise and fall transition, onset at 
         0.0 and offset at the video's duration.
     landmark_paths : list of list of tuple of int or list of tuple of int, default=LANDMARK_FACE_OVAL
         A list of one or more closed landmark paths representing the 
@@ -223,6 +263,11 @@ def layer_colour_brightness(timing_configuration:TimingConfiguration | None = No
         Used as an additive factor to increase the global intensity of a frame
         or image. Accepts values in the range [-25.0, 25.0]. Magnitudes outside
         of this range tend to cause artifacts in the resulting image.
+    brightness_scale : str
+        The method by which the brightness is scaled. `relative` indicates
+        the scaled brightness range begins relative to the provided image or 
+        video frame, where `absolute` indicates the brightness is scaled to
+        the full 0-255 range.
     
     Returns
     -------
@@ -242,7 +287,8 @@ def layer_colour_brightness(timing_configuration:TimingConfiguration | None = No
     try:
         params = BrightnessParameters(
             landmark_paths=landmark_paths, 
-            magnitude=magnitude
+            magnitude=magnitude,
+            brightness_mode=brightness_scale
         )
     except ValidationError as e:
         raise ValueError(f"Invalid parameters for {LayerColourBrightness.__name__}: {e}")

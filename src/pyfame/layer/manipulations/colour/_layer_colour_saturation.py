@@ -24,7 +24,7 @@ class SaturationParameters(BaseModel):
         The degree by which to increase or decrease the saturation.
         Must lie in the range [-25.0, 25.0]. Positive values increase
         saturation; negative values decrease it toward greyscale.
-    saturation_mode : str
+    saturation_scale : str
         The method by which the saturation is scaled. `relative` indicates
         the scaled saturation range begins relative to the provided image or 
         video frame, where `absolute` indicates the saturation is scaled to
@@ -33,18 +33,18 @@ class SaturationParameters(BaseModel):
 
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
     magnitude:float
-    saturation_mode:str
+    saturation_scale:str
 
     @field_validator("magnitude")
     @classmethod
     def check_value_range(cls, value, info:ValidationInfo):
         field_name = info.field_name
-        if not (-25.0 <= value <= 25.0):
-            raise ValueError(f"{field_name} must lie between -25.0 and 25.0.")
+        if not (-100.0 <= value <= 100.0):
+            raise ValueError(f"{field_name} must lie in the range [-100,100].")
         
         return value
 
-    @field_validator("saturation_mode")
+    @field_validator("saturation_scale")
     @classmethod
     def check_accepted_values(cls, value, info:ValidationInfo):
         field_name = info.field_name
@@ -84,6 +84,11 @@ class LayerColourSaturation(Layer):
     magnitude : float
         The degree by which to increase or decrease the saturation.
         Must lie in the range [-25.0, 25.0].
+    saturation_scale : str
+        The method by which the saturation is scaled. `relative` indicates
+        the scaled saturation range begins relative to the provided image or 
+        video frame, where `absolute` indicates the saturation is scaled to
+        the full 0-255 range.
 
     Notes
     -----
@@ -125,9 +130,9 @@ class LayerColourSaturation(Layer):
         # Define class parameters
         self.landmark_paths = self.sat_params.landmark_paths
         self.magnitude = self.sat_params.magnitude
-        self.saturation_mode = self.sat_params.saturation_mode
+        self.saturation_scale = self.sat_params.saturation_scale
         self.has_saturation_been_sampled = False
-        self.relative_shift_amount = 0
+        self.relative_shift_amount = 0.0
 
         # Snapshot of initial state
         self._snapshot_state()
@@ -223,12 +228,12 @@ class LayerColourSaturation(Layer):
         h,s,v = cv.split(img_hsv)
 
         if not self.has_saturation_been_sampled:
-            s_mu = round(np.mean(s, where=mask.astype(bool)))
-            relative_range = 255-s_mu
-            self.relative_shift_amount = round((self.magnitude * relative_range) / 100)
+            s_mu = np.mean(s, where=mask.astype(bool))
+            relative_range = 255.0-s_mu
+            self.relative_shift_amount = (self.magnitude * relative_range) / 100.0
             self.has_saturation_been_sampled = True
 
-        if self.saturation_mode == "relative":
+        if self.saturation_scale == "relative":
             s = np.where(mask == 255, s + (weight * self.relative_shift_amount), s)
             s = np.clip(s,0,255)
         else:
@@ -244,7 +249,7 @@ class LayerColourSaturation(Layer):
         return img_bgr
         
 def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, 
-                            magnitude:float = -12.0, saturation_mode:str = "relative") -> LayerColourSaturation:
+                            magnitude:float = -12.0, saturation_scale:str = "relative") -> LayerColourSaturation:
     """
     Factory function for the saturation manipulation layer. `LayerColourSaturation`
     leverages the HSV colour space to perform intuitive saturation shifts within a
@@ -267,7 +272,7 @@ def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None
         The degree by which to increase or decrease the saturation.
         Must lie in the range [-25.0, 25.0]. Positive values increase
         colour vividness; negative values shift the region toward greyscale.
-    saturation_mode : str
+    saturation_scale : str
             The method by which the saturation is scaled. `relative` indicates
             the scaled saturation range begins relative to the provided image or 
             video frame, where `absolute` indicates the saturation is scaled to
@@ -291,7 +296,7 @@ def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None
         params = SaturationParameters(
             landmark_paths=landmark_paths, 
             magnitude=magnitude, 
-            saturation_mode=saturation_mode
+            saturation_scale=saturation_scale
         )
     except ValidationError as e:
         raise ValueError(f"Invalid parameters for {LayerColourSaturation.__name__}: {e}")

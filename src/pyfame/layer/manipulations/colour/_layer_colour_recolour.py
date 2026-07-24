@@ -32,10 +32,16 @@ class RecolourParameters(BaseModel):
         Taken as a percentage of the total value range of each colour,
         i.e. a magnitude of 10 would shift the colour (128 * 10) = 12.8 units
         on the a* or b* axis.
+    colour_scale : str
+        The method by which the colour is scaled. `relative` indicates
+        the scaled colour range begins relative to the provided image or 
+        video frame, where `absolute` indicates the colour is scaled to
+        the full 0-255 range.
     """
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
     focus_colour:Union[str, int]
     magnitude:NonNegativeFloat
+    colour_scale:str
 
     @field_validator('focus_colour')
     @classmethod
@@ -49,6 +55,24 @@ class RecolourParameters(BaseModel):
                 raise ValidationError(f"{field_name} has been provided an unrecognized value.")
         
         return value
+
+    @field_validator('magnitude')
+    @classmethod
+    def check_valid_range(cls, value, info:ValidationInfo):
+        field_name = info.field_name
+        if not 0.0 <= value <= 100.0:
+            raise ValueError(f"{field_name} must lie in the range [0,100].")
+
+        return value
+
+    @field_validator('colour_scale')
+    @classmethod
+    def check_accepted_values(cls, value, info:ValidationInfo):
+        field_name = info.field_name
+        if str.lower(value) not in {"relative", "absolute"}:
+            raise ValueError(f"{field_name} must be one of `relative` or `absolute`.")
+
+        return str.lower(value)
 
 class LayerColourRecolour(Layer):
     """
@@ -88,6 +112,11 @@ class LayerColourRecolour(Layer):
         Taken as a percentage of the total value range of each colour,
         i.e. a magnitude of 10 would shift the colour (128 * 10) = 12.8 units
         on the a* or b* axis.
+    colour_scale : str
+        The method by which the colour is scaled. `relative` indicates
+        the scaled colour range begins relative to the provided image or 
+        video frame, where `absolute` indicates the colour is scaled to
+        the full 0-255 range.
     eye_blendshape_smoother : EyeBlendshapeSmoother
         Temporal smoother used to detect eye openness for scleral recolouring.
     colour_left_sclera : bool or None
@@ -137,6 +166,9 @@ class LayerColourRecolour(Layer):
         self.landmark_paths = self.colour_params.landmark_paths
         self.focus_colour = self.colour_params.focus_colour
         self.magnitude = self.colour_params.magnitude
+        self.colour_scale = self.colour_params.colour_scale
+        self.has_colour_been_sampled = False
+        self.relative_shift_amount = 0.0
         self.eye_blendshape_smoother = EyeBlendshapeSmoother(frame_window_size=1) 
         self.colour_left_sclera = None
         self.colour_right_sclera = None
@@ -303,10 +335,35 @@ class LayerColourRecolour(Layer):
         # Split the image into individual channels for precise colour manipulation
         l,a,b = cv.split(img_LAB)
 
+        if not self.has_colour_been_sampled:
+            match self.focus_colour:
+                case "red" | 4:
+                    a_mu = np.mean(a, where=mask.astype(bool))
+                    relative_range = 127.0 - a_mu
+                    self.relative_shift_amount = (self.magnitude * relative_range) / 100.0
+                case "blue" | 5:
+                    b_mu = np.mean(b, where=mask.astype(bool))
+                    relative_range = 128.0 + b_mu
+                    self.relative_shift_amount = (self.magnitude * relative_range) / 100.0
+                case "green" | 6:
+                    a_mu = np.mean(a, where=mask.astype(bool))
+                    relative_range = 128.0 + a_mu
+                    self.relative_shift_amount = (self.magnitude * relative_range) / 100.0
+                case "yellow" | 7:
+                    b_mu = np.mean(b, where=mask.astype(bool))
+                    relative_range = 127.0 - b_mu
+                    self.relative_shift_amount = (self.magnitude * relative_range) / 100.0
+
+            self.has_colour_been_sampled = True
+
         # Shift the various colour channels according to the user-specified focus_colour
         match self.focus_colour:
             case "red" | 4:
-                delta = 127.0 * ((weight * self.magnitude)/100.0)
+                if self.colour_scale == "relative":
+                    delta = weight * self.relative_shift_amount
+                else:
+                    delta = 127.0 * ((weight * self.magnitude)/100.0)
+
                 a = np.where(mask==255, a + delta, a)
 
                 if self.colour_left_sclera and left_eye_open:
@@ -317,7 +374,11 @@ class LayerColourRecolour(Layer):
                 a = np.clip(a, -128, 127)
 
             case "blue" | 5:
-                delta = 128.0 * ((weight * self.magnitude)/100.0)
+                if self.colour_scale == "relative":
+                    delta = weight * self.relative_shift_amount
+                else:
+                    delta = 128.0 * ((weight * self.magnitude)/100.0)
+
                 b = np.where(mask==255, b - delta, b)
 
                 if self.colour_left_sclera and left_eye_open:
@@ -328,7 +389,11 @@ class LayerColourRecolour(Layer):
                 b = np.clip(b, -128, 127)
 
             case "green" | 6:
-                delta = 128.0 * ((weight * self.magnitude)/100.0)
+                if self.colour_scale == "relative":
+                    delta = weight * self.relative_shift_amount
+                else:
+                    delta = 128.0 * ((weight * self.magnitude)/100.0)
+
                 a = np.where(mask==255, a - delta, a)
 
                 if self.colour_left_sclera and left_eye_open:
@@ -339,7 +404,11 @@ class LayerColourRecolour(Layer):
                 a = np.clip(a, -128, 127)
 
             case "yellow" | 7:
-                delta = 127.0 * ((weight * self.magnitude)/100.0)
+                if self.colour_scale == "relative":
+                    delta = weight * self.relative_shift_amount
+                else:
+                    delta = 127.0 * ((weight * self.magnitude)/100.0)
+
                 b = np.where(mask==255, b + delta, b)
 
                 if self.colour_left_sclera and left_eye_open:
@@ -361,7 +430,8 @@ class LayerColourRecolour(Layer):
 
         return result
 
-def layer_colour_recolour(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, focus_colour:str|int = "red", magnitude:float = 10.0) -> LayerColourRecolour:
+def layer_colour_recolour(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, 
+                          focus_colour:str|int = "red", magnitude:float = 10.0, colour_scale:str = "relative") -> LayerColourRecolour:
     """
     Factory function for the colour manipulation layer. `LayerColourRecolour` leverages the 
     La*b* colour space to perform perceptually uniform colour shifts in a specified region of the
@@ -389,6 +459,11 @@ def layer_colour_recolour(timing_configuration:TimingConfiguration | None = None
         Taken as a percentage of the total value range of each colour,
         i.e. a magnitude of 10 would shift the colour (128 * 10) = 12.8 units
         on the a* or b* axis.
+    colour_scale : str
+        The method by which the colour is scaled. `relative` indicates
+        the scaled colour range begins relative to the provided image or 
+        video frame, where `absolute` indicates the colour is scaled to
+        the full 0-255 range.
 
     Returns
     -------
@@ -409,7 +484,8 @@ def layer_colour_recolour(timing_configuration:TimingConfiguration | None = None
         params = RecolourParameters(
             landmark_paths=landmark_paths, 
             focus_colour=focus_colour, 
-            magnitude=magnitude
+            magnitude=magnitude,
+            colour_scale=colour_scale
         )
     except ValidationError as e:
         raise ValueError(f"Invalid parameters for {LayerColourRecolour.__name__}: {e}")

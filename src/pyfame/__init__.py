@@ -1,5 +1,5 @@
 # Package root init file
-__version__ = "1.0.5"
+__version__ = "1.0.7"
 __author__ = "Gavin Bosman"
 
 # Direct submodule import
