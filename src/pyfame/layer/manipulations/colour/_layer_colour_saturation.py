@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError
 from typing import Union, List, Tuple
-from pyfame.layer.layer import Layer, TimingConfiguration
+from pyfame.layer._layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.landmark.facial_landmarks import LANDMARK_FACE_OVAL
 from pyfame.utils.constants import *
@@ -24,10 +24,16 @@ class SaturationParameters(BaseModel):
         The degree by which to increase or decrease the saturation.
         Must lie in the range [-25.0, 25.0]. Positive values increase
         saturation; negative values decrease it toward greyscale.
+    saturation_mode : str
+        The method by which the saturation is scaled. `relative` indicates
+        the scaled saturation range begins relative to the provided image or 
+        video frame, where `absolute` indicates the saturation is scaled to
+        the full 0-255 range.
     """
 
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
     magnitude:float
+    saturation_mode:str
 
     @field_validator("magnitude")
     @classmethod
@@ -37,6 +43,15 @@ class SaturationParameters(BaseModel):
             raise ValueError(f"{field_name} must lie between -25.0 and 25.0.")
         
         return value
+
+    @field_validator("saturation_mode")
+    @classmethod
+    def check_accepted_values(cls, value, info:ValidationInfo):
+        field_name = info.field_name
+        if str.lower(value) not in {"relative", "absolute"}:
+            raise ValueError(f"{field_name} must be one of `relative` or `absolute`.")
+
+        return str.lower(value)
 
 class LayerColourSaturation(Layer):
     """
@@ -110,6 +125,9 @@ class LayerColourSaturation(Layer):
         # Define class parameters
         self.landmark_paths = self.sat_params.landmark_paths
         self.magnitude = self.sat_params.magnitude
+        self.saturation_mode = self.sat_params.saturation_mode
+        self.has_saturation_been_sampled = False
+        self.relative_shift_amount = 0
 
         # Snapshot of initial state
         self._snapshot_state()
@@ -203,8 +221,21 @@ class LayerColourSaturation(Layer):
         img_hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV).astype(np.float32)
         # Split the image channels so only the saturation can be shifted
         h,s,v = cv.split(img_hsv)
-        s = np.where(mask == 255, s + (weight * self.magnitude), s)
-        s = np.clip(s,0,255)
+
+        if not self.has_saturation_been_sampled:
+            s_mu = round(np.mean(s, where=mask.astype(bool)))
+            relative_range = 255-s_mu
+            self.relative_shift_amount = round((self.magnitude * relative_range) / 100)
+            self.has_saturation_been_sampled = True
+
+        if self.saturation_mode == "relative":
+            s = np.where(mask == 255, s + (weight * self.relative_shift_amount), s)
+            s = np.clip(s,0,255)
+        else:
+            shift_amount = (self.magnitude * 255) / 100
+            s = np.where(mask == 255, s + (weight * shift_amount), s)
+            s = np.clip(s,0,255)
+        
         img_hsv = cv.merge([h,s,v])
         
         # Convert the HSV image back to BGR before returning the processed image
@@ -212,7 +243,8 @@ class LayerColourSaturation(Layer):
         img_bgr[foreground == 0] = frame[foreground == 0]
         return img_bgr
         
-def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, magnitude:float = -12.0) -> LayerColourSaturation:
+def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None, landmark_paths:list[list[tuple[int,...]]] | list[tuple[int,...]] = LANDMARK_FACE_OVAL, 
+                            magnitude:float = -12.0, saturation_mode:str = "relative") -> LayerColourSaturation:
     """
     Factory function for the saturation manipulation layer. `LayerColourSaturation`
     leverages the HSV colour space to perform intuitive saturation shifts within a
@@ -226,7 +258,7 @@ def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None
         A pydantic model containing timing configurations controlling onset,
         offset, rise/fall durations, and weighting curves. If ``None``, a
         default ``TimingConfiguration`` is instantiated. The default
-        instantiation assumes a linear rise and fall transition, onset at
+        instantiation assumes a constant rise and fall transition, onset at
         0.0 and offset at the video's duration.
     landmark_paths : list of list of tuple of int or list of tuple of int, default=LANDMARK_FACE_OVAL
         A list of one or more closed landmark paths representing the
@@ -235,6 +267,11 @@ def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None
         The degree by which to increase or decrease the saturation.
         Must lie in the range [-25.0, 25.0]. Positive values increase
         colour vividness; negative values shift the region toward greyscale.
+    saturation_mode : str
+            The method by which the saturation is scaled. `relative` indicates
+            the scaled saturation range begins relative to the provided image or 
+            video frame, where `absolute` indicates the saturation is scaled to
+            the full 0-255 range.
 
     Returns
     -------
@@ -253,7 +290,8 @@ def layer_colour_saturation(timing_configuration:TimingConfiguration|None = None
     try:
         params = SaturationParameters(
             landmark_paths=landmark_paths, 
-            magnitude=magnitude
+            magnitude=magnitude, 
+            saturation_mode=saturation_mode
         )
     except ValidationError as e:
         raise ValueError(f"Invalid parameters for {LayerColourSaturation.__name__}: {e}")

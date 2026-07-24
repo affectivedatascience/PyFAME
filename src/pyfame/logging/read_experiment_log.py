@@ -3,7 +3,7 @@ import os
 import jsonschema
 from jsonschema import ValidationError
 from importlib.resources import files
-from pyfame.layer.layer import Layer, TimingConfiguration
+from pyfame.layer._layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.colour import (layer_colour_recolour, layer_colour_brightness, layer_colour_saturation)
 from pyfame.layer.manipulations.mask import layer_mask
 from pyfame.layer.manipulations.occlusion import (layer_occlusion_bar, layer_occlusion_landmark, layer_occlusion_blur, layer_occlusion_noise)

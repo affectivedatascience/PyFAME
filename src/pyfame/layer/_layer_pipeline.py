@@ -1,7 +1,7 @@
-from .layer import Layer
+from ._layer import Layer
 from cv2.typing import MatLike
-from pyfame.layer.manipulations.colour.layer_colour_recolour import LayerColourRecolour
-from pyfame.layer.manipulations.overlay.layer_overlay import LayerOverlay
+from pyfame.layer.manipulations.colour._layer_colour_recolour import LayerColourRecolour
+from pyfame.layer.manipulations.overlay._layer_overlay import LayerOverlay
 
 class LayerPipeline:
     """

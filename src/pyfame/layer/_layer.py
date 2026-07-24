@@ -14,6 +14,9 @@ class TimingConfiguration(BaseModel):
     It supports both binary and dynamic activation windows via configurable rise 
     and fall curves.
 
+    Default behaviour is for the effect to begin at the first frame and end at
+    the videos duration, with constant timing.
+
     This class inherits from pydantic's `BaseModel` to provide validation and 
     default handling of timing parameters.
 
@@ -31,10 +34,10 @@ class TimingConfiguration(BaseModel):
     fall_time_msec : NonNegativeFloat, default=500.0
         Duration (in milliseconds) over which the layer transitions from
         fully active to inactive.
-    rise_curve : callable, default=timing_linear
+    rise_curve : callable, default=timing_constant
         Function defining the temporal interpolation during the rise phase.
         The callable must return a scalar weight in the range `[0.0, 1.0]`.
-    fall_curve : callable, default=timing_linear
+    fall_curve : callable, default=timing_constant
         Function defining the temporal interpolation during the fall phase.
         The callable must return a scalar weight in the range `[0.0, 1.0]`.
     rise_curve_kwargs : dict or None, optional

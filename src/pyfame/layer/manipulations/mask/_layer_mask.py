@@ -1,8 +1,8 @@
 from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo
 from typing import Union, List, Tuple
 from pyfame.utils.constants import *
-from pyfame.layer.manipulations.mask.mask_from_landmarks import mask_from_landmarks
-from pyfame.layer.layer import Layer, TimingConfiguration
+from pyfame.layer.manipulations.mask._mask_from_landmarks import mask_from_landmarks
+from pyfame.layer._layer import Layer, TimingConfiguration
 from pyfame.landmark.facial_landmarks import LANDMARK_FACE_OVAL
 import numpy as np
 import cv2 as cv

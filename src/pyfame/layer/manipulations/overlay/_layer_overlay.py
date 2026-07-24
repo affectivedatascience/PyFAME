@@ -5,8 +5,8 @@ from pyfame.landmark.blendshape_smoother import EyeBlendshapeSmoother
 from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
 from pyfame.file_access import *
 from pyfame.utils import compute_rotation_angle, compute_slope
-from pyfame.layer.layer import Layer, TimingConfiguration
-from pyfame.layer.manipulations.mask.mask_from_landmarks import mask_from_landmarks
+from pyfame.layer._layer import Layer, TimingConfiguration
+from pyfame.layer.manipulations.mask._mask_from_landmarks import mask_from_landmarks
 from pyfame.utils.exceptions import FileReadError
 import cv2 as cv
 import numpy as np

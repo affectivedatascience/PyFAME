@@ -5,7 +5,7 @@ from datetime import datetime
 from importlib.resources import files
 import jsonschema
 from jsonschema import ValidationError
-from pyfame.layer.layer import Layer
+from pyfame.layer._layer import Layer
 from pyfame.utils.general_utilities import get_landmark_names
 
 def make_json_serializable(obj):

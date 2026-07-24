@@ -2,7 +2,7 @@ from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError
 from typing import Union, Optional, List, Tuple
 from pyfame.landmark.facial_landmarks import *
 from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
-from pyfame.layer.layer import Layer, TimingConfiguration
+from pyfame.layer._layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.utils.constants import * 
 from pyfame.utils.general_utilities import get_landmark_names, compute_slope, compute_rotation_angle

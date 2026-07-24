@@ -2,8 +2,8 @@ from pyfame.file_access import get_video_capture, get_video_writer, get_imread, 
 from pyfame.utils.exceptions import *
 from pyfame.layer.timing_curves import *
 from pyfame.landmark.facial_landmarks import *
-from pyfame.layer.layer import Layer
-from pyfame.layer.layer_pipeline import LayerPipeline
+from pyfame.layer._layer import Layer
+from pyfame.layer._layer_pipeline import LayerPipeline
 from pyfame.logging.write_experiment_log import write_experiment_log
 from pyfame.landmark.get_landmark_coordinates import get_face_landmarker, get_landmarker_coordinates
 import cv2 as cv

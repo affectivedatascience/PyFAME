@@ -18,17 +18,28 @@ from .stylise import *
 from .temporal import *
 
 _submodules = ["colour", "mask", "occlusion", "overlay", "spatial", "stylise", "temporal"]
-_modules = [colour, mask, occlusion, overlay, spatial, stylise, temporal]
+_primary_api = [
+    "layer_colour_recolour", 
+    "layer_colour_brightness", 
+    "layer_colour_saturation",
+    "layer_color_recolor",
+    "layer_color_brightness",
+    "layer_color_saturation",
+    "layer_mask", 
+    "mask_from_landmarks",
+    "layer_occlusion_landmark", 
+    "layer_occlusion_bar", 
+    "layer_occlusion_blur", 
+    "layer_occlusion_noise",
+    "layer_overlay",
+    "layer_spatial_grid_shuffle", 
+    "layer_spatial_landmark_relocate", 
+    "FaceAnchor", 
+    "LandmarkRelocateSpec",
+    "layer_stylise_point_light",
+    "layer_stylise_pencil_sketch",
+    "generate_shuffled_block_array", 
+    "apply_temporal_shuffle"
+]
 
-_flattened = []
-for _m in _modules:
-    _flattened.extend(getattr(_m, "__all__", []))
-
-# sanity check for silent collisions between manipulation categories
-_dupes = {n for n in _flattened if _flattened.count(n) > 1}
-if _dupes:
-    raise ImportError(f"Name collisions across manipulation submodules: {_dupes}")
-
-__all__ = _submodules + _flattened
-
-# list(colour.__all__) + list(mask.__all__) + list(occlusion.__all__) + list(overlay.__all__) + list(temporal.__all__) + list(spatial.__all__) + list(stylise.__all__)
+__all__ = _submodules + _primary_api
