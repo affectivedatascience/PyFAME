@@ -1,6 +1,7 @@
 from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError, PositiveFloat, NonNegativeInt
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Any
 from pyfame.landmark.facial_landmarks import *
+from pyfame.landmark.get_landmark_coordinates import get_relative_landmark_coordinates
 from pyfame.layer._layer import Layer, TimingConfiguration
 from pyfame.layer.manipulations.mask import mask_from_landmarks
 from pyfame.utils.constants import *
@@ -29,6 +30,8 @@ class PointLightParameters(BaseModel):
         pseudo-normal distribution across index groups.
     point_colour : tuple of int
         RGB colour of rendered landmark points, with values in [0, 255].
+    point_radius : int
+        The radius of the rendered points.
     display_history_vectors : bool
         If ``True``, overlays motion history vectors between landmark
         positions across frames.
@@ -59,6 +62,7 @@ class PointLightParameters(BaseModel):
     landmark_paths:Union[List[List[Tuple[int,...]]], List[Tuple[int,...]]]
     point_density:PositiveFloat
     point_colour:tuple[NonNegativeInt, NonNegativeInt, NonNegativeInt]
+    point_radius:int
     display_history_vectors:bool
     history_method:Union[int,str] = SHOW_HISTORY_ORIGIN
     history_window_msec:NonNegativeInt = 500
@@ -72,7 +76,7 @@ class PointLightParameters(BaseModel):
         field_name = info.field_name
         for elem in value:
             if not (0 <= elem <= 255):
-                raise ValueError(f"{field_name} values must lie between 0 and 255.")
+                raise ValueError(f"{field_name} values must lie in the range 0 - 255.")
         
         return value
     
@@ -83,6 +87,15 @@ class PointLightParameters(BaseModel):
         if not (0.0 < value <= 1.0):
             raise ValueError(f"Invalid value for parameter {field_name}. Must lie in the range 0.0 - 1.0.")
         
+        return value
+
+    @field_validator("point_radius")
+    @classmethod
+    def check_radius_range(cls, value, info:ValidationInfo):
+        field_name = info.field_name
+        if not (1 <= value <= 25):
+            raise ValueError(f"{field_name} must lie in the range 1 - 25.")
+
         return value
     
     @field_validator("history_method", mode="before")
@@ -129,6 +142,8 @@ class LayerStylisePointLight(Layer):
         Proportion of landmarks displayed.
     point_colour : tuple of int
         RGB colour of rendered points.
+    point_radius : int
+        The radius of the rendered points.
     maintain_background : bool
         Whether to preserve the original frame.
     display_history_vectors : bool
@@ -179,9 +194,9 @@ class LayerStylisePointLight(Layer):
         # Declare class parameters
         self.frame_history = []
         self.prev_points = None
-        self.idx_to_display = np.array([], dtype=np.uint8)
         self.point_density = self.pl_params.point_density
         self.point_colour = self.pl_params.point_colour
+        self.point_radius = self.pl_params.point_radius
         self.maintain_background = self.pl_params.maintain_background
         self.display_history_vectors = self.pl_params.display_history_vectors
         self.history_method = self.pl_params.history_method
@@ -226,6 +241,38 @@ class LayerStylisePointLight(Layer):
         self._layer_parameters["offset_time_msec"] = self.offset_t
         return dict(self._layer_parameters)
 
+    def _convert_landmarks_to_coord_list(self, landmarker_coordinates:Any, landmark:list) -> list[tuple[int,int]]:
+        """
+        Takes a raw landmark path or list of paths, and returns a flattened
+        list of all (x,y) pixel coordinates of the landmarks passed.
+
+        Parameters
+        ----------
+        landmarker_coordinates: list
+            The list object returned by the mediapipe face landmarker
+            instance, containing the (x,y) coordinates of all 478 
+            facial landmarks.
+        landmark: list
+            A list of tuples or a list of list of tuples containing
+            one or more landmark paths.
+        
+        Returns
+        -------
+        List of tuple of int
+            A flattened list of screen pixel coordinates.
+        
+        """
+        lm_coordinates = []
+
+        if isinstance(landmark[0], list):
+            # Multiple landmarks
+            for path in landmark:
+                lm_coordinates.extend(get_relative_landmark_coordinates(landmarker_coordinates, path))
+        else:
+            lm_coordinates.extend(get_relative_landmark_coordinates(landmarker_coordinates, landmark))
+
+        return lm_coordinates
+
     def apply_layer(self, landmarker_coordinates:list[tuple[int,int]], frame:cv.typing.MatLike, dt:float):
         """
         Apply the point-light stylisation effect to a single frame.
@@ -269,88 +316,15 @@ class LayerStylisePointLight(Layer):
         
         mask = np.zeros_like(frame, dtype=np.uint8)
         frame_history_count = round(30 * (self.history_window_msec/1000))
+        # Update later for variable frame rates
 
         if self.maintain_background:
             output_img = frame.copy()
         else:
             output_img = np.zeros_like(frame, dtype=np.uint8)
 
-        included_idx = []
-
-        if isinstance(self.landmark_paths[0], list):
-            for lm_path in self.landmark_paths:
-                lm_mask = mask_from_landmarks(frame, lm_path, landmarker_coordinates)
-                lm_mask = lm_mask.astype(bool)
-                height, width = lm_mask.shape
-
-                # Use the generated bool mask to get valid indicies
-                for id, (x, y) in enumerate(landmarker_coordinates):
-                    # Explicit bounds testing to handle face crossing frame boundaries
-                    if not (0 <= x < width and 0 <= y < height):
-                        continue
-
-                    if lm_mask[y,x] == True:
-                        included_idx.append(id)
-        else:
-            lm_mask = mask_from_landmarks(frame, self.landmark_paths, landmarker_coordinates)
-            lm_mask = lm_mask.astype(bool)
-            height, width = lm_mask.shape
-
-            # Use the generated bool mask to get valid indicies
-            for id, (x, y) in enumerate(landmarker_coordinates):
-                # Explicit bounds testing to handle face crossing frame boundaries
-                if not (0 <= x < width and 0 <= y < height):
-                    continue
-
-                if lm_mask[y,x] == True:
-                    included_idx.append(id)
-        
-        included_idx = np.array(included_idx, dtype=np.uint8)
-
-        if self.point_density != 1.0 and len(self.idx_to_display) == 0:
-            # Pad and reshape idx array to slices of size 10
-            new_lm_idx = included_idx.copy()
-            pad_size = len(new_lm_idx)%10
-            append_arr = np.full(10-pad_size, -1)
-            new_lm_idx = np.append(new_lm_idx, append_arr)
-            new_lm_idx = new_lm_idx.reshape((-1, 10))
-
-            bin_idx_mask = np.zeros((new_lm_idx.shape[0], new_lm_idx.shape[1]), dtype=np.uint8)
-
-            for i,_slice in enumerate(new_lm_idx):
-                num_ones = round(np.floor(10*self.point_density))
-
-                # Generate normal distribution around center of slice
-                mean = 4.5
-                std_dev = 1.67
-                normal_idx = np.random.normal(loc=mean, scale=std_dev, size=num_ones)
-                normal_idx = np.clip(normal_idx, 0, 9).astype(int)
-
-                new_bin_arr = np.zeros((10), dtype=np.uint8)
-                for idx in normal_idx:
-                    new_bin_arr[idx] = 1
-                
-                # Ensure the correct proportion of ones are present
-                while new_bin_arr.sum() < num_ones:
-                    add_idx = np.random.choice(np.where(new_bin_arr == 0)[0])
-                    new_bin_arr[add_idx] = 1
-                
-                bin_idx_mask[i] = new_bin_arr
-            
-            bin_idx_mask = bin_idx_mask.reshape((-1,))
-            new_lm_idx = new_lm_idx.reshape((-1,))
-            self.idx_to_display = np.where(bin_idx_mask == 1, new_lm_idx, -1)
-        elif len(self.idx_to_display) == 0:
-            self.idx_to_display = included_idx.copy()
-
-        cur_points = []
+        cur_points = self._convert_landmarks_to_coord_list(landmarker_coordinates, self.landmark_paths)
         history_mask = np.zeros_like(frame, dtype=np.uint8)
-
-        # Store the x,y coords of every idx_to_display
-        for id in self.idx_to_display:
-            if id != -1:
-                point = landmarker_coordinates[id]
-                cur_points.append(point)
         
         if self.prev_points == None or self.display_history_vectors == False:
             self.prev_points = cur_points.copy()
@@ -359,7 +333,7 @@ class LayerStylisePointLight(Layer):
             for point in cur_points:
                 x1, y1 = point
                 if x1 > 0 and y1 > 0:
-                    cv.circle(output_img, (x1, y1), 3, self.point_colour, -1)
+                    cv.circle(output_img, (x1, y1), self.point_radius, self.point_colour, -1)
 
         elif self.history_method == SHOW_HISTORY_ORIGIN:
             # If show_history is true, display vector paths of all points;
@@ -368,7 +342,7 @@ class LayerStylisePointLight(Layer):
                 x0, y0 = old
                 x1, y1 = new
                 cv.line(mask, (int(x0), int(y0)), (int(x1), int(y1)), self.history_colour, 2)
-                cv.circle(output_img, (int(x1), int(y1)), 3, self.point_colour, -1)
+                cv.circle(output_img, (int(x1), int(y1)), self.point_radius, self.point_colour, -1)
 
             #self.prev_points = cur_points.copy()
             output_img = cv.add(output_img, mask)
@@ -380,7 +354,7 @@ class LayerStylisePointLight(Layer):
                 x0, y0 = old
                 x1, y1 = new
                 cv.line(mask, (int(x0), int(y0)), (int(x1), int(y1)), self.history_colour, 2)
-                cv.circle(output_img, (int(x1), int(y1)), 3, self.point_colour, -1)
+                cv.circle(output_img, (int(x1), int(y1)), self.point_radius, self.point_colour, -1)
 
             # Relative vector history only displays up to history_window_msec seconds of history
             if len(self.frame_history) < frame_history_count:
@@ -402,8 +376,9 @@ class LayerStylisePointLight(Layer):
         return output_img
         
 def layer_stylise_point_light(timing_configuration:TimingConfiguration | None = None, landmark_paths:list[list[tuple[int,int]]] | list[tuple[int,int]]=LANDMARK_FACE_OVAL, 
-                              point_density:float = 1.0, point_colour:tuple[int,int,int] = (255,255,255), display_history_vectors:bool = False, history_window_msec:int = 500,
-                              history_method:int|str = SHOW_HISTORY_ORIGIN, history_vector_colour:tuple[int,int,int] = (0,0,255), maintain_background:bool = False, invert_colours:bool = False):
+                              point_density:float = 1.0, point_colour:tuple[int,int,int] = (255,255,255), point_radius:int = 3, display_history_vectors:bool = False, 
+                              history_window_msec:int = 500, history_method:int|str = SHOW_HISTORY_ORIGIN, history_vector_colour:tuple[int,int,int] = (0,0,255), 
+                              maintain_background:bool = False, invert_colours:bool = False):
     """
     Factory function for the point-light stylisation layer. This
     function validates input parameters, constructs and returns a
@@ -424,6 +399,8 @@ def layer_stylise_point_light(timing_configuration:TimingConfiguration | None = 
         Proportion of landmarks to render, in the range (0.0, 1.0].
     point_colour : tuple of int, optional
         RGB colour of rendered points.
+    point_radius : int
+        The radius of the rendered points.
     display_history_vectors : bool, optional
         Whether to display motion history vectors.
     history_window_msec : int, optional
@@ -456,6 +433,7 @@ def layer_stylise_point_light(timing_configuration:TimingConfiguration | None = 
             landmark_paths=landmark_paths, 
             point_density=point_density, 
             point_colour=point_colour, 
+            point_radius=point_radius,
             display_history_vectors=display_history_vectors, 
             history_method=history_method, 
             history_window_msec=history_window_msec,

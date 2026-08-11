@@ -383,14 +383,14 @@ class LayerSpatialLandmarkRelocate(Layer):
         le_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_EYE_REGION)
         re_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_EYE_REGION)
         nose_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, landmark_nose_wide)
-        lips_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_MOUTH_REGION)
+        lips_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_MOUTH)
         fo_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_FACE_OVAL)
 
         # Creating boolean masks of each landmark region
         le_mask = mask_from_landmarks(frame, LANDMARK_LEFT_EYE_REGION, landmarker_coordinates)
         re_mask = mask_from_landmarks(frame, LANDMARK_RIGHT_EYE_REGION, landmarker_coordinates)
         nose_mask = mask_from_landmarks(frame, landmark_nose_wide, landmarker_coordinates)
-        lip_mask = mask_from_landmarks(frame, LANDMARK_MOUTH_REGION, landmarker_coordinates)
+        lip_mask = mask_from_landmarks(frame, LANDMARK_MOUTH, landmarker_coordinates)
         fo_mask = mask_from_landmarks(frame, LANDMARK_FACE_OVAL, landmarker_coordinates)
         face_skin_mask = mask_from_landmarks(frame, LANDMARK_FACE_SKIN, landmarker_coordinates)
 

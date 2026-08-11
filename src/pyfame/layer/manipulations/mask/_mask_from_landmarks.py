@@ -32,7 +32,6 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
     lc_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_CHEEK)
     rc_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_CHEEK)
     chin_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_CHIN)
-    nose_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_NOSE)
     nose_wide_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, create_landmark_path(NOSE_WIDE_IDX))
     ler_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_EYE_REGION)
     rer_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_EYE_REGION)
@@ -40,7 +39,11 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
     re_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_EYE)
     li_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_IRIS)
     ri_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_IRIS)
-    lips_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_MOUTH_REGION)
+    leb_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LEFT_EYEBROW)
+    reb_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_RIGHT_EYEBROW)
+    mouth_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_MOUTH)
+    lip_o_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LIPS_OUTER_CONTOUR)
+    lip_i_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_LIPS_INNER_CONTOUR)
     fo_screen_coords = get_relative_landmark_coordinates(landmarker_coordinates, LANDMARK_FACE_OVAL)
 
     if isinstance(landmark_paths[0], list):
@@ -138,8 +141,16 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                     re_mask = cv.fillConvexPoly(re_mask, np.array(re_screen_coords), 1)
                     re_mask = re_mask.astype(bool)
 
+                    leb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                    leb_mask = cv.fillConvexPoly(leb_mask, np.array(leb_screen_coords), 1)
+                    leb_mask = leb_mask.astype(bool)
+
+                    reb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                    reb_mask = cv.fillConvexPoly(reb_mask, np.array(reb_screen_coords), 1)
+                    reb_mask = reb_mask.astype(bool)
+
                     lip_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
-                    lip_mask = cv.fillConvexPoly(lip_mask, np.array(lips_screen_coords), 1)
+                    lip_mask = cv.fillConvexPoly(lip_mask, np.array(lip_o_screen_coords), 1)
                     lip_mask = lip_mask.astype(bool)
 
                     oval_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
@@ -150,6 +161,8 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                     masked_frame[oval_mask] = 255
                     masked_frame[le_mask] = 0
                     masked_frame[re_mask] = 0
+                    masked_frame[leb_mask] = 0
+                    masked_frame[reb_mask] = 0
                     masked_frame[lip_mask] = 0
                 
                 # Chin
@@ -188,6 +201,30 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
 
                     masked_frame[li_mask] = 255
                     masked_frame[ri_mask] = 255
+
+                case [(10,)]:
+                    leb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                    leb_mask = cv.fillConvexPoly(leb_mask, np.array(leb_screen_coords), 1)
+                    leb_mask = leb_mask.astype(bool)
+
+                    reb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                    reb_mask = cv.fillConvexPoly(reb_mask, np.array(reb_screen_coords), 1)
+                    reb_mask = reb_mask.astype(bool)
+
+                    masked_frame[leb_mask] = 255
+                    masked_frame[reb_mask] = 255
+
+                case [(11,)]:
+                    lip_o_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                    lip_o_mask = cv.fillConvexPoly(lip_o_mask, np.array(lip_o_screen_coords), 1)
+                    lip_o_mask = lip_o_mask.astype(bool)
+
+                    lip_i_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                    lip_i_mask = cv.fillConvexPoly(lip_i_mask, np.array(lip_i_screen_coords), 1)
+                    lip_i_mask = lip_i_mask.astype(bool)
+
+                    masked_frame[lip_o_mask] = 255
+                    masked_frame[lip_i_mask] = 0
 
                 case _:
                     cur_landmark_coords = get_relative_landmark_coordinates(landmarker_coordinates, path)
@@ -292,8 +329,16 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                 re_mask = cv.fillConvexPoly(re_mask, np.array(re_screen_coords), 1)
                 re_mask = re_mask.astype(bool)
 
+                leb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                leb_mask = cv.fillConvexPoly(leb_mask, np.array(leb_screen_coords), 1)
+                leb_mask = leb_mask.astype(bool)
+
+                reb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                reb_mask = cv.fillConvexPoly(reb_mask, np.array(reb_screen_coords), 1)
+                reb_mask = reb_mask.astype(bool)
+
                 lip_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
-                lip_mask = cv.fillConvexPoly(lip_mask, np.array(lips_screen_coords), 1)
+                lip_mask = cv.fillConvexPoly(lip_mask, np.array(lip_o_screen_coords), 1)
                 lip_mask = lip_mask.astype(bool)
 
                 oval_mask = np.zeros((frame.shape[0],frame.shape[1]), dtype=np.uint8)
@@ -304,6 +349,8 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                 masked_frame[oval_mask] = 255
                 masked_frame[le_mask] = 0
                 masked_frame[re_mask] = 0
+                masked_frame[leb_mask] = 0
+                masked_frame[reb_mask] = 0
                 masked_frame[lip_mask] = 0
             
             # Chin
@@ -342,6 +389,30 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
 
                 masked_frame[li_mask] = 255
                 masked_frame[ri_mask] = 255
+
+            case [(10,)]:
+                leb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                leb_mask = cv.fillConvexPoly(leb_mask, np.array(leb_screen_coords), 1)
+                leb_mask = leb_mask.astype(bool)
+
+                reb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                reb_mask = cv.fillConvexPoly(reb_mask, np.array(reb_screen_coords), 1)
+                reb_mask = reb_mask.astype(bool)
+
+                masked_frame[leb_mask] = 255
+                masked_frame[reb_mask] = 255
+
+            case [(11,)]:
+                lip_o_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                lip_o_mask = cv.fillConvexPoly(lip_o_mask, np.array(lip_o_screen_coords), 1)
+                lip_o_mask = lip_o_mask.astype(bool)
+
+                lip_i_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+                lip_i_mask = cv.fillConvexPoly(lip_i_mask, np.array(lip_i_screen_coords), 1)
+                lip_i_mask = lip_i_mask.astype(bool)
+
+                masked_frame[lip_o_mask] = 255
+                masked_frame[lip_i_mask] = 0
 
             case _:
                 cur_landmark_coords = get_relative_landmark_coordinates(landmarker_coordinates, landmark_paths)

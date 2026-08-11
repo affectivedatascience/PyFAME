@@ -143,17 +143,28 @@ def get_concave_landmark_coordinates(concave_path) -> list[tuple[int,int]]:
            output_path.extend(LANDMARK_FACE_OVAL)
            output_path.extend(LANDMARK_LEFT_EYE_REGION)
            output_path.extend(LANDMARK_RIGHT_EYE_REGION)
-           output_path.extend(LANDMARK_MOUTH_REGION)
+           output_path.extend(LANDMARK_MOUTH)
+
         # Chin
         case [(6,)]:    
             output_path.extend(chin_path)
         
         case [(8,)]:
-            output_path.extend(LANDMARK_LEFT_EYE, LANDMARK_RIGHT_EYE)
+            output_path.extend(LANDMARK_LEFT_EYE)
+            output_path.extend(LANDMARK_RIGHT_EYE)
         
         case [(9,)]:
-            output_path.extend(LANDMARK_LEFT_IRIS, LANDMARK_RIGHT_IRIS)
+            output_path.extend(LANDMARK_LEFT_IRIS)
+            output_path.extend(LANDMARK_RIGHT_IRIS)
 
+        case [(10,)]:
+            output_path.extend(LANDMARK_LEFT_EYEBROW)
+            output_path.extend(LANDMARK_RIGHT_EYEBROW)
+
+        case [(11,)]:
+            output_path.extend(LANDMARK_LIPS_INNER_CONTOUR)
+            output_path.extend(LANDMARK_LIPS_OUTER_CONTOUR)
+            
         case _:
             raise ValueError("The concave path you have passed is either unrecognized or incompatible with get_concave_path_coords().")
     

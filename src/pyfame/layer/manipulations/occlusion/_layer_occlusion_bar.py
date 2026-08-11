@@ -57,7 +57,7 @@ class BarOcclusionParameters(BaseModel):
     @field_validator("landmark_paths", mode="before")
     @classmethod
     def check_compatible_path(cls, value, info:ValidationInfo):
-        valid_paths = [LANDMARK_LEFT_EYE_REGION, LANDMARK_RIGHT_EYE_REGION, LANDMARK_BOTH_EYE_REGIONS, LANDMARK_NOSE, LANDMARK_MOUTH_REGION]
+        valid_paths = [LANDMARK_LEFT_EYE_REGION, LANDMARK_RIGHT_EYE_REGION, LANDMARK_BOTH_EYE_REGIONS, LANDMARK_NOSE, LANDMARK_MOUTH]
         field_name = info.field_name
                 
         if value not in valid_paths:
