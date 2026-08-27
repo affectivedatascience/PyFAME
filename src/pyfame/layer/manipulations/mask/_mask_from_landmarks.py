@@ -390,6 +390,7 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                 masked_frame[li_mask] = 255
                 masked_frame[ri_mask] = 255
 
+            # Both Eyebrows
             case [(10,)]:
                 leb_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
                 leb_mask = cv.fillConvexPoly(leb_mask, np.array(leb_screen_coords), 1)
@@ -402,6 +403,7 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
                 masked_frame[leb_mask] = 255
                 masked_frame[reb_mask] = 255
 
+            # Lips inner and outer contour
             case [(11,)]:
                 lip_o_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
                 lip_o_mask = cv.fillConvexPoly(lip_o_mask, np.array(lip_o_screen_coords), 1)

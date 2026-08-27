@@ -23,16 +23,16 @@ _OVERLAY_MAPPING = {
     "sunglasses": {
         "path": _OVERLAY_DIR / "sunglasses.png",
         "anchor_landmarks": (127, 356),
-        "center_landmark": 6,
+        "center_landmark": None,
         "scale_factor": None
     },
     "glasses": {
         "path": _OVERLAY_DIR / "glasses.png",
         "anchor_landmarks": (127, 356),
-        "center_landmark": 6,
+        "center_landmark": None,
         "scale_factor": None
     },
-    "teardrop_short_1": { # Update this with hard coded tear_left_cheek, tear_right_cheek
+    "teardrop": { # Update this with hard coded tear_left_cheek, tear_right_cheek
         "path": _OVERLAY_DIR / "teardrops" / "teardrop_1.png",
         "anchor_landmarks": (6, 356),
         "center_landmark": 348,
@@ -41,14 +41,14 @@ _OVERLAY_MAPPING = {
     "face_mask": {
         "path": _OVERLAY_DIR / "face_mask.png",
         "anchor_landmarks": (127, 356),
-        "center_landmark": 6,
+        "center_landmark": None,
         "scale_factor": None
     }
 }
 
 _OVERLAY_CACHE: dict[str, cv.typing.MatLike] = {}
 
-def compute_scale(landmarker_coordinates:list[dict], anchor_landmarks:tuple[int,int], scale_factor:float = 1.0) -> float:
+def compute_scale(landmarker_coordinates:list[dict], anchor_landmarks:tuple[int,int], scale_factor:float | None) -> float:
     """
     Compute a scale value from the Euclidean distance between two anchor
     landmarks, optionally weighted by a scale factor.
@@ -134,7 +134,9 @@ def load_overlay(overlay_name:str, landmarker_coordinates:list[tuple[int,int]], 
     # Pre-defined overlay type
     config = _OVERLAY_MAPPING[overlay_name]
     file_path = str(config["path"])
-    scale_factor = config["scale_factor"]
+    if scale_factor is None:
+        scale_factor = config["scale_factor"]
+
     anchor_landmarks = config["anchor_landmarks"]
     center_landmark = config["center_landmark"]
 
@@ -145,13 +147,19 @@ def load_overlay(overlay_name:str, landmarker_coordinates:list[tuple[int,int]], 
             raise FileReadError("Error reading in file.")
     
     img = _OVERLAY_CACHE[overlay_name]
-        
-    center_point = landmarker_coordinates[center_landmark]
-    
-    if scale_factor is None:
-        scale = compute_scale(landmarker_coordinates, anchor_landmarks)
+
+    if center_landmark is not None:
+        center_point = landmarker_coordinates[center_landmark]
     else:
-        scale = compute_scale(landmarker_coordinates, anchor_landmarks, scale_factor)
+        x1,y1 = landmarker_coordinates[anchor_landmarks[0]]
+        x2,y2 = landmarker_coordinates[anchor_landmarks[1]]
+
+        cx = round(x2 - ((x2 - x1) / 2.0))
+        cy = round(y2 - ((y2 - y1) / 2.0))
+        center_point = (cx, cy)
+    
+    
+    scale = compute_scale(landmarker_coordinates, anchor_landmarks, scale_factor)
     
     return (img, anchor_landmarks, center_point, scale)
         
@@ -169,7 +177,7 @@ class OverlayParameters(BaseModel):
         The overlay to apply. Accepted string values are ``"sunglasses"``,
         ``"glasses"``, ``"teardrop"``, ``"face_mask"``, and ``"pupils"``. Accepted
         integer values are ``43`` (sunglasses), ``44`` (glasses), ``45``
-        (teardrop), ``46`` (face mask), and ``47`` (pupils). A file path to a 
+        (teardrop), ``46`` (face_mask), and ``47`` (pupils). A file path to a 
         custom overlay image may also be provided as a string. Integer inputs 
         are normalised to their string equivalents on validation.
     overlay_scale_factor : float or None, optional
@@ -536,10 +544,45 @@ class LayerOverlay(Layer):
             x_pos = center_point[0] - padded_width//2 + self.x_offset
             y_pos = center_point[1] - padded_height//2 + self.y_offset
 
-            roi = frame[y_pos:y_pos + padded_height, x_pos:x_pos + padded_width]
-            blended = (1.0 - overlay_mask) * roi + overlay_mask * overlay_img
+            # Clip the overlay placement to the frame boundaries
+            frame_h, frame_w = frame.shape[:2]
 
-            overlayed_frame[y_pos:y_pos + padded_height, x_pos:x_pos + padded_width] = blended.astype(np.uint8)
+            # Determine visible region in frame coordinates
+            x1 = max(0, x_pos)
+            y1 = max(0, y_pos)
+            x2 = min(frame_w, x_pos + padded_width)
+            y2 = min(frame_h, y_pos + padded_height)
+
+            # Overlay lies completely outside the frame
+            if x1 >= x2 or y1 >= y2:
+                return frame
+
+            # Determine corresponding region in overlay coordinates
+            overlay_x1 = x1 - x_pos
+            overlay_y1 = y1 - y_pos
+            overlay_x2 = overlay_x1 + (x2 - x1)
+            overlay_y2 = overlay_y1 + (y2 - y1)
+
+            # Extract matching regions
+            roi = frame[y1:y2, x1:x2]
+
+            cropped_overlay_img = overlay_img[
+                overlay_y1:overlay_y2,
+                overlay_x1:overlay_x2
+            ]
+
+            cropped_overlay_mask = overlay_mask[
+                overlay_y1:overlay_y2,
+                overlay_x1:overlay_x2
+            ]
+
+            # Alpha blend
+            blended = (
+                (1.0 - cropped_overlay_mask) * roi
+                + cropped_overlay_mask * cropped_overlay_img
+            )
+
+            overlayed_frame[y1:y2, x1:x2] = blended.astype(np.uint8)
 
         return overlayed_frame
         
