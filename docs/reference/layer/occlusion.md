@@ -1,5 +1,7 @@
 # Occlusion
 
+Mask-based and object occlusion, noise addition and blurring.
+
 ::: pyfame.layer.manipulations.occlusion._layer_occlusion_bar
     options:
       members:

@@ -1,5 +1,7 @@
 # Stylization
 
+Stylised interpretations of the face including pencil sketches and point-light displays.
+
 ::: pyfame.layer.manipulations.stylise._layer_stylise_point_light
     options:
       members:

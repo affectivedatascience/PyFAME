@@ -11,8 +11,8 @@ def standardise_image_dimensions(input_directory:str, method:int|str = STANDARDI
     image dimensions. Depending on the equalization method provided, each image in the directory will be either padded to the maximal 
     dimensions, or cropped to the minimal dimensions.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
 
     input_directory: str
         A path string to a directory containing static images to be equalized.
@@ -23,8 +23,8 @@ def standardise_image_dimensions(input_directory:str, method:int|str = STANDARDI
     pad_colour: tuple of int
         A BGR color code specifying the fill color of the padded region added to each image when using STANDARDIZE_DIMS_PAD.
 
-    Raises:
-    -------
+    Raises
+    ------
 
     TypeError:
         Given invalid parameter typings.
@@ -182,8 +182,8 @@ def apply_conversion_image_to_video(file_paths:pd.DataFrame, output_filename:str
     and interpolating frames. Output "movie" files will be written to output_dir. The output video file will have frames
     written in the order they appear within the file_paths.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
 
     file_paths: DataFrame
         A 2-column dataframe consisting of absolute and relative file paths.
@@ -204,8 +204,8 @@ def apply_conversion_image_to_video(file_paths:pd.DataFrame, output_filename:str
     blended_frames_proportion: float
         A float in the range [0,1] specifying how much of an images repeat window should be used for the blending transition.
     
-    Raises:
-    -------
+    Raises
+    ------
 
     TypeError:
         Given invalid parameter typings.
@@ -220,8 +220,8 @@ def apply_conversion_image_to_video(file_paths:pd.DataFrame, output_filename:str
     FileReadError:
         On error catches thrown by cv2.imread.
     
-    Returns:
-    --------
+    Returns
+    -------
 
     None
     

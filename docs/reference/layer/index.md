@@ -7,18 +7,10 @@ a **landmark** - the region of application defined by a complete circular path o
 
 layers can be stacked or combined to form complex multi-effect manipulations. Every application of one or more layers is performed by calling the top level method **apply_layers()**, which takes in a dataframe of file paths (returned by **make_paths()**) and a list of layers.
 
-::: pyfame.layer._layer.TimingConfiguration
-
----
-
-::: pyfame.layer._layer.Layer
+::: pyfame.layer._layer
     options:
       members:
-        - compute_weight
-        - supports_weight
-        - get_layer_parameters
-        - apply_layer
-      members_order: source
+        - Layer
 
 ---
 

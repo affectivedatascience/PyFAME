@@ -1,5 +1,7 @@
 # Colouring
 
+Image and video recolouring, brightness adjustment and saturation adjustment.
+
 ::: pyfame.layer.manipulations.colour._layer_colour_brightness
     options:
       members:

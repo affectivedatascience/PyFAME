@@ -1,5 +1,7 @@
 # Logging
 
+Logging utilities for recording and ingesting PyFAME processing and manipulation information.
+
 ::: pyfame.logging.read_experiment_log
     options:
       members:

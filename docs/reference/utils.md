@@ -19,4 +19,16 @@ PyFAME comes equiped with a variety of utility functions that provide convenienc
 
 ---
 
+## Custom Exceptions
+
 ::: pyfame.utils.exceptions
+    options:
+      members:
+        - FileReadError
+        - FileWriteError
+        - IncompatibleFileError
+        - UnrecognizedExtensionError
+        - ImageShapeError
+        - FaceNotFoundError
+        - NamespaceError
+      members_order: source

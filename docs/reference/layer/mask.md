@@ -1,5 +1,7 @@
 # Masking
 
+Image and video region-based masking.
+
 ::: pyfame.layer.manipulations.mask._layer_mask
     options:
       members:

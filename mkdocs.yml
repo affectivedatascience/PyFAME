@@ -12,9 +12,7 @@ theme:
     - navigation.indexes       # allows section index pages (important for API nav)
     - navigation.tabs          # top-level sections as tabs
     - navigation.tabs.sticky   # tabs stay visible on scroll
-    - navigation.sections      # expand sections in sidebar
     - navigation.top           # back-to-top button
-    - navigation.expand
     - search.highlight
     - search.suggest
     - content.code.copy
@@ -44,7 +42,8 @@ plugins:
           options:
             docstring_style: numpy
             heading_level: 2
-            show_root_heading: true
+            show_root_heading: false
+            show_root_toc_entry: false
             show_root_full_path: false
             show_symbol_type_heading: true
             show_symbol_type_toc: true
@@ -56,26 +55,31 @@ plugins:
  
 nav:
   - Home: index.md
-  - Getting Started: getting-started/index.md
-  - Reference:
-    - Reference: reference/index.md
-    - Analyse: reference/analyse.md
-    - File Access: reference/file_access.md
-    - Landmark: reference/landmark.md
-    - Layer:
-      - Layer: reference/layer/index.md
-      - Colour: reference/layer/colour.md
-      - Masking: reference/layer/mask.md
-      - Occlusion: reference/layer/occlusion.md
-      - Overlay: reference/layer/overlay.md
-      - Spatial: reference/layer/spatial.md
-      - Stylise: reference/layer/stylise.md
-    - Logging: reference/logging.md
-    - Utilities: reference/utils.md
-  - Tutorials:
-    - tutorials/index.md
-  - Changelog: changelog.md
-  - Affective Data Science Lab: https://affectivedatascience.com/
+  - Docs:
+    - getting-started/index.md
+    - Getting Started: getting-started/getting_started.md
+    - Contributing: getting-started/contrib.md
+    - Examples: examples/index.md
+    - API Reference:
+      - reference/index.md
+      - Analyse: reference/analyse.md
+      - File Access: reference/file_access.md
+      - Landmark: reference/landmark.md
+      - Layer: 
+        - reference/layer/index.md
+        - Colour: reference/layer/colour.md
+        - Masking: reference/layer/mask.md
+        - Occlusion: reference/layer/occlusion.md
+        - Overlay: reference/layer/overlay.md
+        - Spatial: reference/layer/spatial.md
+        - Stylise: reference/layer/stylise.md
+      - Timing: reference/timing.md
+      - Logging: reference/logging.md
+      - Utilities: reference/utils.md
+  - About:
+    - about/index.md
+    - Changelog: about/changelog.md
+    - Affective Data Science Lab: https://affectivedatascience.com/
  
 markdown_extensions:
   - admonition

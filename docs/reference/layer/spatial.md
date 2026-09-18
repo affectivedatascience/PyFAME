@@ -1,5 +1,7 @@
 # Spatial Transformations
 
+Landmark-based and grid based relocation of the facial features.
+
 ::: pyfame.layer.manipulations.spatial._layer_spatial_grid_shuffle
     options:
       members:

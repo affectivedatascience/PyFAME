@@ -57,3 +57,102 @@
         max-width: 100%;
     }
 }
+
+/* Responsive two-column author grid. */
+.author-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Individual author card. */
+.author-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    border: 0.05rem solid var(--md-default-fg-color--lightest);
+    border-radius: 0.2rem;
+    text-align: center;
+    box-shadow: var(--md-shadow-z1);
+}
+
+/* Circular author portrait. */
+.author-avatar {
+    display: block;
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin: 0.5rem auto 1rem;
+}
+
+/* Author name. */
+.author-card h2 {
+    margin: 0.5rem 0 0.25rem;
+    font-size: 1.25rem;
+}
+
+/* Author/project role. */
+.author-role {
+    margin: 0 0 1rem;
+    color: var(--md-default-fg-color--light);
+}
+
+.author-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    margin-top: auto;
+}
+
+.author-links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+.author-links a:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+.author-links img {
+    display: block;
+    width: 1.5rem;
+    height: 1.5rem;
+    object-fit: contain;
+    opacity: 0.75;
+    transition:
+        opacity 0.2s ease,
+        filter 0.2s ease;
+}
+
+/* Black icons in light mode. */
+[data-md-color-scheme="default"] .author-links img {
+    filter: none;
+}
+
+/* White icons in dark mode. */
+[data-md-color-scheme="slate"] .author-links img {
+    filter: invert(1);
+}
+
+/* Emphasize icon on hover. */
+.author-links a:hover img {
+    opacity: 1;
+}
+
+/* Stack cards vertically on smaller displays. */
+@media screen and (max-width: 44.984375em) {
+    .author-grid {
+        grid-template-columns: 1fr;
+    }
+}

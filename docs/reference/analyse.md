@@ -1,7 +1,10 @@
 # Analyse
 
+Provides functions for analysing facial data and manipulation outputs, as well as writing out CSV data files to disk. 
+
 ::: pyfame.analyse.analyse_facial_colour_means
     options:
+      heading: Facial Colour
       members:
         - analyse_facial_colour_means
 

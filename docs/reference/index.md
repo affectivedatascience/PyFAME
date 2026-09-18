@@ -38,6 +38,14 @@ quick access links below or the side bar to navigate to a specific submodule:
 
     [:octicons-arrow-right-24: View Layer](./layer/index.md)
 
+-   :octicons-clock-16:{ .lg .middle } **Timing**
+
+    ---
+
+    Timing functions used to modulate within video manipulation onsets, offsets and strength curves.
+
+    [:octicons-arrow-right-24: View Timing](./timing.md)
+
 -   :material-text-box-outline:{ .lg .middle } **Logging**
 
     ---
