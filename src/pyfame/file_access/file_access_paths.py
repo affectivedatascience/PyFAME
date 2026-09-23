@@ -100,8 +100,8 @@ def load_user_data(data_folder_name:str = "data", include_folders:list[str] = ["
     rel_file_paths = []
 
     for path, dirs, files in os.walk(data_path, topdown=True):
-        # Include only selected subdirectories
-        dirs[:] = [d for d in dirs if d in include_folders]
+        # Include only selected subdirectories, excluding PyFAME's sample data
+        dirs[:] = [d for d in dirs if d in include_folders and d != "samples"]
 
         for file in files:
             full_path = os.path.join(path, file)
