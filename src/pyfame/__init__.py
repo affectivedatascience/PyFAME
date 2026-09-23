@@ -1,5 +1,5 @@
 # Package root init file
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __author__ = "Gavin Bosman"
 
 # Direct submodule import
@@ -15,13 +15,13 @@ import pyfame.logging as logging
 from pyfame.analyse import *
 from pyfame.landmark import *
 from pyfame.layer import *
-from pyfame.file_access import make_paths
+from pyfame.file_access import make_paths, load_user_data, load_sample_data
 
 from pyfame.analyse import __all__ as _analyse_all
 from pyfame.landmark import __all__ as _landmark_all
 from pyfame.layer import __all__ as _layer_all
 
 __all__ = (
-    ["analyse", "file_access", "landmark", "layer", "utils", "logging", "make_paths"]
+    ["analyse", "file_access", "landmark", "layer", "utils", "logging", "make_paths", "load_user_data", "load_sample_data"]
     + _analyse_all + _landmark_all + _layer_all
 )

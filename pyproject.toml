@@ -64,6 +64,11 @@ include = ["pyfame*"]
 "pyfame.schema" = ["*.json"]
 "pyfame.models.mediapipe" = ["*.task"]
 "pyfame.layer.manipulations.overlay.overlay_images" = ["*.png", "*.jpg"]
+"pyfame.data.sample" = [
+    "01/*.mp4",
+    "02/*.mp4",
+    "license/LICENSE-RAVDESS.txt"
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
