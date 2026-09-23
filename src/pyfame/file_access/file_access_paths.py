@@ -146,42 +146,36 @@ def load_sample_data(data_folder_name:str = "data") -> pd.DataFrame:
     OSError
         Given invalid folder names.
     """
-    if not os.path.exists(Path(os.getcwd(), data_folder_name)):
+    cwd = Path.cwd()
+    data_path = cwd / data_folder_name
+
+    if not data_path.exists():
         raise OSError(f"Folder {data_folder_name} does not exist or cannot be found in the cwd.")
 
-    dest_path = Path(os.getcwd(), data_folder_name, "raw", "samples")
+    dest_path = data_path / "raw" / "samples"
     dest_path.mkdir(exist_ok=True, parents=True)
 
-    sample_dir_01 = resources.files("pyfame").joinpath("data", "sample", "01")
-    sample_dir_02 = resources.files("pyfame").joinpath("data", "sample", "02")
-
-    for res in sample_dir_01.iterdir():
-        if res.name.endswith(".mp4"):
-            output_path = dest_path / res.name
-
-            with res.open("rb") as src:
-                with output_path.open("wb") as dst:
-                    shutil.copyfileobj(src, dst)
-
-    for res in sample_dir_02.iterdir():
-            if res.name.endswith(".mp4"):
-                output_path = dest_path / res.name
-    
-                with res.open("rb") as src:
-                    with output_path.open("wb") as dst:
-                        shutil.copyfileobj(src, dst)
+    sample_dirs = [
+        resources.files("pyfame").joinpath("data", "sample", "01"),
+        resources.files("pyfame").joinpath("data", "sample", "02")
+    ]
 
     full_file_paths = []
     rel_file_paths = []
 
-    for path, dirs, files in os.walk(dest_path, topdown=True):
+    for sample_dir in sample_dirs:
+        for res in sample_dir.iterdir():
+            if res.name.endswith(".mp4"):
+                output_path = dest_path / res.name
 
-        for file in files:
-            full_path = Path(path, file)
-            rel_path = full_path.relative_to(Path(os.getcwd()))
-            
-            full_file_paths.append(full_path)
-            rel_file_paths.append(rel_path)
+                # Ensure files are only written if they dont yet exist
+                if not output_path.exists():
+                    with res.open("rb") as src:
+                        with output_path.open("wb") as dst:
+                            shutil.copyfileobj(src, dst)
+
+                full_file_paths.append(output_path)
+                rel_file_paths.append(output_path.relative_to(cwd))
 
     df1 = pd.DataFrame({
         "Absolute Path":full_file_paths,

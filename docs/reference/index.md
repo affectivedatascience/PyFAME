@@ -6,14 +6,6 @@ quick access links below or the side bar to navigate to a specific submodule:
 
 <div class="grid cards" markdown>
 
--   :material-chart-box-outline:{ .lg .middle } **Analyse**
-
-    ---
-
-    Functions for analysing facial data and manipulation outputs.
-
-    [:octicons-arrow-right-24: View Analyse](./analyse.md)
-
 -   :material-file-document-outline:{ .lg .middle } **File Access**
 
     ---
@@ -21,6 +13,14 @@ quick access links below or the side bar to navigate to a specific submodule:
     Utilities for reading, writing, locating, and managing PyFAME data files.
 
     [:octicons-arrow-right-24: View File Access](./file_access.md)
+
+-   :octicons-clock-16:{ .lg .middle } **Timing**
+
+    ---
+
+    Timing functions used to modulate within video manipulation onsets, offsets and strength curves.
+
+    [:octicons-arrow-right-24: View Timing](./timing.md)
 
 -   :material-map-marker-radius:{ .lg .middle } **Landmark**
 
@@ -38,13 +38,15 @@ quick access links below or the side bar to navigate to a specific submodule:
 
     [:octicons-arrow-right-24: View Layer](./layer/index.md)
 
--   :octicons-clock-16:{ .lg .middle } **Timing**
+
+
+-   :material-tools:{ .lg .middle } **Utils**
 
     ---
 
-    Timing functions used to modulate within video manipulation onsets, offsets and strength curves.
+    General-purpose utility functions used throughout PyFAME.
 
-    [:octicons-arrow-right-24: View Timing](./timing.md)
+    [:octicons-arrow-right-24: View Utils](./utils.md)
 
 -   :material-text-box-outline:{ .lg .middle } **Logging**
 
@@ -54,12 +56,12 @@ quick access links below or the side bar to navigate to a specific submodule:
 
     [:octicons-arrow-right-24: View Logging](./logging.md)
 
--   :material-tools:{ .lg .middle } **Utils**
+-   :material-chart-box-outline:{ .lg .middle } **Analyse**
 
     ---
 
-    General-purpose utility functions used throughout PyFAME.
+    Functions for analysing facial data and manipulation outputs.
 
-    [:octicons-arrow-right-24: View Utils](./utils.md)
+    [:octicons-arrow-right-24: View Analyse](./analyse.md)
 
 </div>

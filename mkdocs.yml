@@ -55,27 +55,28 @@ plugins:
  
 nav:
   - Home: index.md
-  - Docs:
+  - Getting Started: 
     - getting-started/index.md
-    - Getting Started: getting-started/getting_started.md
-    - Contributing: getting-started/contrib.md
     - Examples: examples/index.md
-    - API Reference:
-      - reference/index.md
-      - Analyse: reference/analyse.md
-      - File Access: reference/file_access.md
-      - Landmark: reference/landmark.md
-      - Layer: 
-        - reference/layer/index.md
-        - Colour: reference/layer/colour.md
-        - Masking: reference/layer/mask.md
-        - Occlusion: reference/layer/occlusion.md
-        - Overlay: reference/layer/overlay.md
-        - Spatial: reference/layer/spatial.md
-        - Stylise: reference/layer/stylise.md
-      - Timing: reference/timing.md
-      - Logging: reference/logging.md
-      - Utilities: reference/utils.md
+    - About PyFAME: getting-started/about-pyfame.md
+    - Contributing: getting-started/contrib.md
+    - Testing: getting-started/test.md
+  - Reference:
+    - reference/index.md
+    - File Access: reference/file_access.md
+    - Timing: reference/timing.md
+    - Landmark: reference/landmark.md
+    - Layer: 
+      - reference/layer/index.md
+      - Colour: reference/layer/colour.md
+      - Masking: reference/layer/mask.md
+      - Occlusion: reference/layer/occlusion.md
+      - Overlay: reference/layer/overlay.md
+      - Spatial: reference/layer/spatial.md
+      - Stylise: reference/layer/stylise.md
+    - Utilities: reference/utils.md
+    - Logging: reference/logging.md
+    - Analyse: reference/analyse.md
   - About:
     - about/index.md
     - Changelog: about/changelog.md

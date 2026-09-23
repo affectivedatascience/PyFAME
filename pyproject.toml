@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Pyfame"
-version = "1.0.9"
+name = "pyfame"
+version = "1.0.10"
 authors = [
     { name="Gavin Bosman", email="gavin.bosman12@gmail.com" },
 ]
