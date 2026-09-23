@@ -4,6 +4,7 @@ from pyfame.file_access.checks import *
 from pathlib import Path
 from importlib import resources
 import shutil
+import warnings
 
 def make_paths(root_folder:str = None):
     """ If the top level "data/" folder is not yet set up, this function will
@@ -114,6 +115,13 @@ def load_user_data(data_folder_name:str = "data", include_folders:list[str] = ["
         "Absolute Path":full_file_paths,
         "Relative Path":rel_file_paths,
     })
+
+    if df1.empty:
+        warnings.warn(
+            "load_user_data(): Could not find any files at the specified location, " \
+            "returning an empty DataFrame.",
+            UserWarning
+        )
 
     return df1
 

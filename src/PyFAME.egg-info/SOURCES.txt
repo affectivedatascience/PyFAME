@@ -15,6 +15,11 @@ src/pyfame/analyse/analyse_facial_colour_means.py
 src/pyfame/analyse/analyse_optical_flow_dense.py
 src/pyfame/analyse/analyse_optical_flow_sparse.py
 src/pyfame/analyse/analysis_to_disk.py
+src/pyfame/data/sample/01/sample_01.mp4
+src/pyfame/data/sample/01/sample_02.mp4
+src/pyfame/data/sample/02/sample_03.mp4
+src/pyfame/data/sample/02/sample_04.mp4
+src/pyfame/data/sample/license/LICENSE-RAVDESS.txt
 src/pyfame/file_access/__init__.py
 src/pyfame/file_access/checks.py
 src/pyfame/file_access/file_access_directories.py
