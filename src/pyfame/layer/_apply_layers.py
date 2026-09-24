@@ -193,7 +193,7 @@ def apply_layers(file_paths:pd.DataFrame, layers:list[Layer] | Layer, min_face_d
             num_faces=1,
             min_face_detection_confidence=min_face_detection_confidence,
             min_face_presence_confidence=min_face_presence_confidence,
-            min_tracking_confidence=min_tracking_confidence,
+            min_face_tracking_confidence=min_tracking_confidence,
             output_face_blendshapes=True
         )
         

@@ -25,6 +25,13 @@ def generate_shuffled_block_array(file_path:str, shuffle_method:int = TEMPORAL_S
         A seed to numpy's random number generator.
     block_duration: int
         The precise time duration in milliseconds of each block of frames.
+    
+    Returns
+    -------
+    tuple[list[int], int]
+        A tuple containing the shuffled temporal block
+        ordering, and the integer length of each temporal 
+        block (frames per block).
 
     Raises
     ------
@@ -92,12 +99,19 @@ def apply_temporal_shuffle(file_paths:pd.DataFrame, shuffle_method:int = TEMPORA
         The time duration (in milliseconds) of each block of frames.
     drop_last_block: bool
         A boolean flag indicating if the uneven block of remaining frames should be dropped from the output.
+    
+    Returns
+    -------
+    None
 
     Raises
     ------
-    TypeError: given invalid parameter types.
-    FileReadError: given invalid or corrupted file paths.
-    UnrecognizedExtensionError: given unknown or invalid video containers.
+    TypeError
+        Given invalid parameter types.
+    FileReadError
+        Given invalid or corrupted file paths.
+    UnrecognizedExtensionError
+        Given unknown or invalid video containers.
     """
 
     # Get the current sys timestamp for a unique output folder

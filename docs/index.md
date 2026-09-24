@@ -6,50 +6,49 @@ hide:
 
 <div class="pyfame-hero" markdown>
 
-<div class="pyfame-hero-logo">
-    <img src="assets/pyfame_logo.png" alt="PyFAME logo">
-</div>
-
 <div class="pyfame-hero-content" markdown>
 
 # PyFAME
 
 ## The Python Facial Analysis and Manipulation Environment
 
-A Python toolkit for creating reproducible facial stimuli and
-manipulations for affective computing, psychology, and neuroscience.
+### A Python toolkit for creating reproducible facial stimuli and manipulations for affective computing, psychology, and neuroscience.
 
 </div>
 
+<div class="pyfame-hero-logo">
+    <img src="assets/pyfame_logo.png" alt="PyFAME logo">
+</div>
+
+</div>
+
+<div class="pyfame-hero-buttons" markdown>
+[What Is PyFAME?](getting-started/about-pyfame.md){ .md-button .md-button--primary }
+[Getting Started](getting-started/index.md){ .md-button }
+[GitHub](https://github.com/affectivedatascience/PyFAME){ .md-button }
 </div>
 
 <div class="grid cards" markdown>
 
--   :material-rocket-launch:{ .lg .middle } **Getting Started**
+-   <img src="./assets/icons/layer.svg" class="home-card-icon">
+    **Manipulation Layering**
 
     ---
 
-    Install PyFAME, configure your environment, and create your
-    first facial manipulation.
+    Combine several manipulations into a single processing call.
 
-    [:octicons-arrow-right-24: Get started](getting-started/index.md)
-
--   :material-book-open-page-variant:{ .lg .middle } **API Reference**
+-   <img src="./assets/icons/curve.svg" class="home-card-icon">
+    **Temporal Modulation**
 
     ---
 
-    Explore PyFAME's modules, layers, classes, functions, and
-    configuration options.
+    Precisely control a manipulations onset, offset and strength at any given moment.
 
-    [:octicons-arrow-right-24: Browse the API](reference/index.md)
-
--   :fontawesome-brands-github:{ .lg .middle } **GitHub**
+-   <img src="./assets/icons/face-recognition.svg" class="home-card-icon">
+    **Precise Regional Application**
 
     ---
 
-    Browse the source code, report an issue, or contribute to
-    PyFAME.
-
-    [:octicons-arrow-right-24: View repository](https://github.com/affectivedatascience/PyFAME)
+    Access 478 facial landmarks for targeted regional application.
 
 </div>

@@ -62,7 +62,7 @@ import pyfame as pf
 from pyfame import facial_landmarks as lms
 
 # Get your file paths object
-file_paths = pf.make_paths()
+file_paths = pf.load_sample_data()
 
 # Define a TimingConfiguration object
 config = pf.TimingConfiguration(
@@ -99,7 +99,7 @@ import pyfame as pf
 from pyfame import facial_landmarks as lms
 
 # Get your file paths object
-file_paths = pf.make_paths()
+file_paths = pf.load_sample_data()
 
 # Define your timing configurations
 config_colour = pf.TimingConfiguration(
@@ -135,5 +135,55 @@ pf.apply_layers(
 
 ---
 
-## Advanced Example 1: File path filtering
+## Advanced Example 1: Custom landmark region
+
+```python
+import cv2
+import pyfame as pf
+from pyfame.utils import display_landmarks_face_overlay
+
+# Load in file paths
+file_paths = pf.load_sample_data()
+
+# Optionally, visualize the MediaPipe facial landmarks first
+
+# Read in image
+my_img_path = "C:/my/path/to/img.png"
+img = cv2.imread(my_img_path)
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+# Get FaceLandmarker and landmark coordinates
+faceLM = pf.get_face_landmarker()
+coords = pf.get_landmarker_coordinates(
+    frame_rgb = img_rgb, 
+    face_landmarker = faceLM, 
+    static_image_mode = True
+)
+# Display the coords over the face in the provided image
+display_landmarks_face_overlay(
+    frame = img, 
+    landmarker_coordinates = coords
+)
+
+# Define a set of landmark points, in order to ensure the resulting path 
+# is circular you must duplicate the first landmark to the end of the list
+landmark_points = [112, 109, 104, 103, 100, 78, 82, 207, 69, 110, 112]
+
+# Create a custom path
+custom_path = pf.create_landmark_path(
+    landmark_set = landmark_points
+)
+
+# Define a layer with default constant timing
+mask = pf.layer_mask(
+    landmark_paths = custom_path
+)
+
+# Apply the mask manipulation to your file paths
+pf.apply_layer(
+    file_paths = file_paths,
+    layers = mask
+)
+
+```
 

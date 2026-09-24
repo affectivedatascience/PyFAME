@@ -34,25 +34,6 @@ def create_output_directory(root_path:str, directory_name:str) -> str:
     return os.path.join(root_path, directory_name)
     
 def map_directory_structure(input_directory:str, output_directory:str) -> None:
-    """ Maps the subdirectory structure of one directory into another.
-
-    Parameters
-    ----------
-
-    input_directory: str
-        The path string to the directory whose structure will be copied.
-    
-    output_directory: str
-        The path string to the directory where the copied structure will be written.
-    
-    Raises
-    ------
-
-    TypeError
-
-    OSError
-    
-    """
 
     # Type checking parameters
     check_type(input_directory, [str])

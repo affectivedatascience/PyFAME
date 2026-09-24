@@ -8,7 +8,8 @@ def create_landmark_path(landmark_set:list[int]) -> list[tuple]:
     ----------
 
     landmark_set: list of int
-        A python list containing facial landmark indicies.
+        A python list containing facial landmark indicies, with the first index 
+        appended to the end of the list, ensuring a circular path.
     
     Returns
     -------

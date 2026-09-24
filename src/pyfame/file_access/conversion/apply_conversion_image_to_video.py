@@ -39,7 +39,6 @@ def standardise_image_dimensions(input_directory:str, method:int|str = STANDARDI
     
     Returns
     -------
-
     None
 
     """

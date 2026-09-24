@@ -1,4 +1,4 @@
-# Landmarks
+# Landmark
 
 PyFAME comes packaged with a complete set of facial landmark paths
 compatible with every function. These include several individual 
@@ -7,11 +7,23 @@ facial components, as well as several complex multi-component paths.
 Users may also use the Mediapipe facial landmarks to create their own
 custom path using `create_path()`
 
+::: pyfame.landmark.get_landmark_coordinates
+    options:
+      members:
+        - get_face_landmarker
+        - get_landmarker_coordinates
+
+::: pyfame.landmark.facial_landmarks
+    options:
+      members:
+        - create_landmark_path
+
+---
+
 ::: pyfame.landmark.facial_landmarks
     options:
       members_order: source
       members:
-        - create_landmark_path
         - LANDMARK_LEFT_EYE_REGION
         - LANDMARK_RIGHT_EYE_REGION
         - LANDMARK_LEFT_EYEBROW

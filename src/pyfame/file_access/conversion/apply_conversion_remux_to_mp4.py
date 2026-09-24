@@ -22,7 +22,6 @@ def apply_conversion_remux_to_mp4(file_paths:pd.DataFrame) -> None:
     
     Returns
     -------
-
     None
     
     """

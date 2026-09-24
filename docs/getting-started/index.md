@@ -2,7 +2,7 @@
 
 ## Installing PyFAME
 
-PyFAME requires Python >= 3.9 to be installed on your system. You can find information on installing and setting up Python [here](https://wiki.python.org/moin/BeginnersGuide/Download). Once you have Python installed, PyFAME can be installed with pip via PyPi:
+PyFAME requires Python >= 3.9 to be installed on your system. You can find information on installing and setting up Python [here](https://www.python.org/downloads/). Once you have Python installed, PyFAME can be installed with pip via PyPi:
 
 ```sh
 pip install pyfame

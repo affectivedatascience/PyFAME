@@ -17,18 +17,19 @@ theme:
     - search.suggest
     - content.code.copy
   palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
     - scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    
  
 plugins:
   - search
@@ -58,7 +59,7 @@ nav:
   - Getting Started: 
     - getting-started/index.md
     - Examples: examples/index.md
-    - About PyFAME: getting-started/about-pyfame.md
+    - What is PyFAME?: getting-started/about-pyfame.md
     - Contributing: getting-started/contrib.md
     - Testing: getting-started/test.md
   - Reference:
@@ -77,7 +78,7 @@ nav:
     - Utilities: reference/utils.md
     - Logging: reference/logging.md
     - Analyse: reference/analyse.md
-  - About:
+  - About Us:
     - about/index.md
     - Changelog: about/changelog.md
     - Affective Data Science Lab: https://affectivedatascience.com/

@@ -15,6 +15,7 @@ def get_video_capture(file_path:str) -> cv.VideoCapture:
     Returns
     -------
     cv2.VideoCapture
+        An instantiated VideoCapture object.
 
     Raises
     ------

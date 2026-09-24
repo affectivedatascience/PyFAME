@@ -22,7 +22,7 @@ def mask_from_landmarks(frame:cv.typing.MatLike, landmark_paths:list[list[tuple[
 
     Returns
     -------
-    mask : MatLike
+    mask : ndarray
         A binary image with everything masked out except for the regions
         enclosed by landmark_paths.
     """

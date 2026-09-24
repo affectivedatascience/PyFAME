@@ -9,8 +9,53 @@ from pyfame.file_access.file_access_paths import get_landmarker_task_path
 from pyfame.landmark.facial_landmarks import *
 
 def get_face_landmarker(running_mode:str = "image", num_faces:int = 1, min_face_detection_confidence:float = 0.4, 
-                        min_face_presence_confidence:float = 0.7, min_tracking_confidence:float = 0.7, 
-                        output_face_blendshapes:bool = False, output_transform_matrixes:bool = False):
+                        min_face_presence_confidence:float = 0.7, min_face_tracking_confidence:float = 0.7, 
+                        output_face_blendshapes:bool = False, output_transform_matrices:bool = False):
+    """ Instantiate and return a MediaPipe FaceLandmarker instance.
+
+    Parameters
+    ----------
+    running_mode: str
+        A string defining the FaceLandmarker's running mode; 
+        one of "image" or "video".
+    
+    num_faces: int
+        The number of faces to target during the detection phase.
+
+    min_face_detection_confidence: float
+        The min confidence required for a face detection to be
+        considered a success.
+    
+    min_face_presence_confidence: float
+        After a face has been detected, the min confidence required
+        to keep the model in tracking mode. If the actual value 
+        falls below the threshold, the model goes back to detection.
+    
+    min_face_tracking_confidence: float
+        The min confidence required for the model to match a moved 
+        face with the identity of a previously detected face.
+    
+    output_face_blendshapes: bool
+        If True, the model will return a list of facial blendshapes
+        and scores indicating their current orientations.
+    
+    output_transform_matrices: bool
+        If True, the model will return a list of facial transform
+        matrices describing the facial transforms between successive
+        frames.
+    
+    Returns
+    -------
+    FaceLandmarker
+        An instantiated and callable instance of the MediaPipe
+        FaceLandmarker model.
+    
+    Raises
+    ------
+    ValueError
+        Given invalid or unrecognized parameter values.
+    
+    """
     task_path = get_landmarker_task_path()
 
     match running_mode.lower():
@@ -28,9 +73,9 @@ def get_face_landmarker(running_mode:str = "image", num_faces:int = 1, min_face_
         num_faces = num_faces,
         min_face_detection_confidence = min_face_detection_confidence,
         min_face_presence_confidence = min_face_presence_confidence,
-        min_tracking_confidence = min_tracking_confidence,
+        min_tracking_confidence = min_face_tracking_confidence,
         output_face_blendshapes = output_face_blendshapes,
-        output_facial_transformation_matrixes = output_transform_matrixes
+        output_facial_transformation_matrixes = output_transform_matrices
     )
     detector = vision.FaceLandmarker.create_from_options(options)
 
@@ -38,6 +83,46 @@ def get_face_landmarker(running_mode:str = "image", num_faces:int = 1, min_face_
                                                                                                                    
 def get_landmarker_coordinates(frame_rgb:cv.typing.MatLike, face_landmarker:Any, timestamp_msec:float | None = None, 
                           static_image_mode:bool = False, return_blendshapes:bool = False) -> tuple[list[tuple[int,int]], list[Any] | None] | list[tuple[int,int]]:
+    """ Given a frame and a FaceLandmarker instance, returns the screen pixel
+    coordinates of all 478 facial landmarks. Optionally can return a list of
+    facial blendshape scores.
+
+    Parameters
+    ----------
+    frame_rgb: ndarray
+        An RGB matrix representation of an image frame.
+    
+    face_landmarker: Any
+        A defined instance of the MediaPipe FaceLandmarker model.
+
+    timestamp_msec: float
+        If the FaceLandmarker is in video running mode, the 
+        current video timestamp is required.
+    
+    static_image_mode: bool
+        Tells the function to only pass the provided 
+        frame to the FaceLandmarker, assuming it is in 
+        image running mode.
+    
+    return_blendshapes: bool
+        Tells the function to output the blendshape score
+        list, assuming it is enabled in the FaceLandmarker 
+        model.
+    
+    Returns
+    -------
+    landmark_coordinates : tuple[list[tuple[int,int]], list[Any]] or list[tuple[int,int]]
+        Either a list of (x,y) screen coordinates, or a tuple containing that
+        list plus a list of blendshape scores.
+    
+    Raises
+    ------
+    ValueError
+        Given invalid or unrecognized parameter values.
+    FaceNotFoundError
+        When the FaceLandmarker fails to detect a face
+        within the provided frame.
+    """
     
     # Save the orignal dimensions for determining padding
     original_h, original_w = frame_rgb.shape[:2]

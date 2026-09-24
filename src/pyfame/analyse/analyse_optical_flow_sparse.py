@@ -167,8 +167,9 @@ def analyse_optical_flow_sparse(file_paths:pd.DataFrame, landmark_idx_to_track:l
     
     Returns
     -------
-
     dict[str, pandas.Dataframe]
+        A dictionary of filename-DataFrame pairs, containing per-file
+        analysis results.
 
     Raises
     ------

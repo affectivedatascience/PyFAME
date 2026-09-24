@@ -27,6 +27,7 @@ def get_video_writer(file_path:str, frame_size:tuple[int,int], video_codec:str =
     Returns
     -------
     cv2.VideoWriter
+        An instantiated VideoWriter object.
 
     Raises
     ------

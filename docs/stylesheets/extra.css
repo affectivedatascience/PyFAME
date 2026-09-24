@@ -1,64 +1,193 @@
+/* ==========================================================================
+   PyFAME Colour Palette
+   ========================================================================== */
+
+:root {
+    --md-primary-fg-color: #22B1B5;
+    --md-primary-fg-color--light: #4FC1C4;
+    --md-primary-fg-color--dark: #198B8E;
+
+    --md-accent-fg-color: #22B1B5;
+    --md-accent-fg-color--transparent: rgba(34, 177, 181, 0.10);
+}
+
+/* Improve link contrast against the light background. */
+[data-md-color-scheme="default"] {
+    --md-typeset-a-color: #198B8E;
+}
+
+/* Use the true PyFAME turquoise against the dark background. */
+[data-md-color-scheme="slate"] {
+    --md-typeset-a-color: #22B1B5;
+}
+
+/* ==========================================================================
+   PyFAME Home Page
+   ========================================================================== */
+
 .pyfame-hero {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 3rem;
-
-    max-width: 1100px;
-    margin: 0.75rem auto 1.5rem;
-    padding: 0.5rem 1rem;
-}
-
-.pyfame-hero-logo {
-    flex: 0 0 auto;
-}
-
-.pyfame-hero-logo img {
-    width: 300px;
-    height: auto;
-    display: block;
+    gap: 4rem;
+    margin: 0.75rem auto 0.5rem;
 }
 
 .pyfame-hero-content {
     flex: 1;
-    max-width: 650px;
+    max-width: 700px;
 }
 
 .pyfame-hero-content h1 {
     margin-top: 0;
-    margin-bottom: 0.5rem;
-    font-size: 2.6rem;
 }
 
-.pyfame-hero-content h2 {
-    margin-top: 0;
-    margin-bottom: 1.25rem;
-    font-weight: 500;
+.pyfame-hero-logo {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.pyfame-hero-content p {
-    font-size: 1.05rem;
-    line-height: 1.7;
+.pyfame-hero-logo img {
+    width: 280px;
+    max-width: 100%;
+    height: auto;
 }
 
-/* Stack the hero vertically on smaller screens */
-@media screen and (max-width: 700px) {
+
+/* Hero navigation buttons */
+
+.pyfame-hero-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.5rem auto 1.5rem;
+}
+
+.pyfame-hero-buttons .md-button {
+    border-radius: 2.0rem;
+}
+
+.home-card-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 0.3rem;
+}
+
+[data-md-color-scheme="slate"] .home-card-icon {
+    filter: invert(1);
+}
+
+/* Responsive layout */
+
+@media screen and (max-width: 44.984375em) {
     .pyfame-hero {
-        flex-direction: column;
+        flex-direction: column-reverse;
         gap: 1.5rem;
         text-align: center;
     }
 
     .pyfame-hero-logo img {
-        width: 220px;
+        width: 200px;
     }
 
-    .pyfame-hero-content {
-        max-width: 100%;
+    .pyfame-hero-buttons {
+        flex-wrap: wrap;
     }
 }
 
-/* Responsive two-column author grid. */
+/* ==========================================================================
+   Header / Navigation
+   ========================================================================== */
+
+/* Main header row */
+.md-header__inner {
+    height: 2.0rem;
+}
+
+/* Navigation tabs row */
+.md-tabs {
+    height: 2rem;
+}
+
+.md-tabs__list {
+    height: 2rem;
+}
+
+.md-tabs__item {
+    height: 2rem;
+    padding-top: 0;
+}
+
+.md-tabs__link {
+    height: 2rem;
+    margin-top: 0;
+
+    display: flex;
+    align-items: center;
+}
+
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+    background-color: var(--md-default-bg-color);
+    color: var(--md-default-fg-color);
+}
+
+[data-md-color-scheme="default"] .md-header,
+[data-md-color-scheme="default"] .md-tabs {
+    background-color: var(--md-default-bg-color);
+    color: var(--md-default-fg-color);
+}
+
+.md-tabs {
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* ==========================================================================
+   Search Bar
+   ========================================================================== */
+
+.md-search__form {
+    background-color: var(--md-default-fg-color--lightest);
+    border-radius: 0.4rem;
+    transition:
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.md-search__form:hover,
+.md-search__form:focus-within {
+    background-color: var(--md-default-fg-color--lighter);
+}
+
+.md-search__form:focus-within {
+    box-shadow: 0 0 0 1px var(--md-accent-fg-color);
+}
+
+/* Search input and placeholder */
+.md-search__input {
+    color: var(--md-default-fg-color);
+}
+
+.md-search__input::placeholder {
+    color: var(--md-default-fg-color--light);
+}
+
+/* Search and clear icons */
+.md-search__icon,
+.md-search__icon svg {
+    color: var(--md-default-fg-color);
+    fill: currentColor;
+}
+
+/* ==========================================================================
+   Author cards
+   ========================================================================== */
+
 .author-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -155,4 +284,83 @@
     .author-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* ==========================================================================
+   Cards
+   ========================================================================== */
+
+.grid.cards > ul > li {
+    background-color: #f7f7f8;
+    border: 1px solid #e5e5e7;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+
+    transition:
+        background-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+.grid.cards > ul > li:hover {
+    background-color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.10);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+.md-button {
+    background-color: #f7f7f8;
+    border: 1px solid #dedee1;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+
+    transition:
+        background-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+.md-button:hover {
+    background-color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.10);
+    transform: translateY(-1px);
+}
+
+.md-button.md-button--primary {
+    background-color: var(--md-primary-fg-color);
+    border-color: var(--md-primary-fg-color);
+    color: white;
+}
+
+.md-button.md-button--primary:hover {
+    background-color: var(--md-accent-fg-color);
+    border-color: var(--md-accent-fg-color);
+}
+
+/* ==========================================================================
+   Dark Mode
+   ========================================================================== */
+
+[data-md-color-scheme="slate"] .grid.cards > ul > li {
+    background-color: #252a33;
+    border-color: #363c47;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.20);
+}
+
+[data-md-color-scheme="slate"] .grid.cards > ul > li:hover {
+    background-color: #2d333d;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.30);
+}
+
+[data-md-color-scheme="slate"] .md-button:not(.md-button--primary) {
+    background-color: #252a33;
+    border-color: #363c47;
+}
+
+[data-md-color-scheme="slate"] .md-button:not(.md-button--primary):hover {
+    background-color: #2d333d;
 }

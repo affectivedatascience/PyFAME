@@ -73,6 +73,8 @@ def analyse_facial_colour_means(file_paths:pd.DataFrame, colour_space:int|str = 
     -------
 
     dict[str, pandas.Dataframe]
+        A dictionary of filename-DataFrame pairs, containing per-file
+        analysis results.
 
     Raises
     ------

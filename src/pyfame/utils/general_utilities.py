@@ -19,7 +19,6 @@ def get_variable_name(variable, namespace) -> str:
         
         Returns
         -------
-
         variable_name: str
             The assigned variable name at the given scope level (if any).
     """

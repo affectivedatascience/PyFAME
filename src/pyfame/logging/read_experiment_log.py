@@ -24,6 +24,12 @@ def read_experiment_log(log_file_path:str) -> list[Layer]:
     log_file_path: str
         A path string to the log file containing manipulation info 
         to be replicated.
+    
+    Returns
+    -------
+    layers_return: list[Layer]
+        A list of defined layers, matching the parameters used in the
+        provided log file.
 
     Raises
     ------

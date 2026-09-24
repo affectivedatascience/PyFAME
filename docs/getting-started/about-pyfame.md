@@ -1,4 +1,4 @@
-# About PyFAME?
+# What is PyFAME?
 
 PyFAME is a python package providing tools for targeted facial manipulation and analysis
 using facial landmark-based computer vision techniques.
