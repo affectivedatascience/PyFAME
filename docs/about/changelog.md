@@ -4,6 +4,25 @@ All notable changes to PyFAME will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.10] 2026-09-24
+
+### Added
+- Continued minor updates improving over reworked architecture:
+    - Added asymetric timing curve capabilities for more precise temporal control
+    - Added pencil sketch stylistic manipulation
+    - Added `relative` vs `absolute` scale options for colouring family of layers
+    - Added several new landmark sets including `LANDMARK_LIPS`, `LANDMARK_LIPS_INNER_CONTOUR`, `LANDMARK_LIPS_OUTER_CONTOUR`, `LANDMARK_LEFT_EYEBROW` and `LANDMARK_RIGHT_EYEBROW`
+- `make_paths` functionality was too broad, and has now been divided into three methods: `make_paths`, `load_user_data` and `load_sample_data`. Previously `make_paths` constructed the required directory structure AND returned a DataFrame of file paths, whereas now those two functionalities have been split. `make_paths` now is called only once after first installing PyFAME, setting up the necessary data folder in your working directory. The primary file readin method is now `load_user_data` which will return a DataFrame of file paths like before. Optionally users can also use newly packaged sample data by calling `load_sample_data`.
+- The documentation site has been completely reworked with mkdoctrings. The site is now automatically updated alongside the code definitions.
+
+### Changed
+-  Expanded parametric control and redesigned for ease of use: `layer_spatial_grid_shuffle`, `layer_spatial_landmark_relocate` and `layer_stylise_point_light`
+- `layer_spatial_landmark_relocate` now takes in a parameter `landmark_relocate_specs`, which is a dictionary of integer ids and `LandmarkRelocateSpec` objects. 
+    - `LandmarkRelocateSpec` is a class defining cannonical facial locations, making it much simpler to define the intended relocation position when using layer_spatial_landmark_relocate
+
+### Removed
+- VitePress dev dependency
+
 ## [1.0.0] 2025-10-02
 
 ### Added

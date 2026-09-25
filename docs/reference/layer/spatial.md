@@ -12,6 +12,7 @@ Landmark-based and grid based relocation of the facial features.
 ::: pyfame.layer.manipulations.spatial._layer_spatial_landmark_relocate
     options:
       members:
+        - LandmarkRelocateSpec
         - layer_spatial_landmark_relocate
 
 ---

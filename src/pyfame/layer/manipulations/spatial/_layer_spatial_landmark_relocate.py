@@ -38,9 +38,6 @@ class LandmarkRelocateSpec(BaseModel):
         as fractions of face width and face height respectively. Both values
         must lie in the range [-1.0, 1.0]. Positive x shifts the landmark
         rightward; positive y shifts it downward.
-
-    Notes
-    -----
     """
 
     anchor:FaceAnchor

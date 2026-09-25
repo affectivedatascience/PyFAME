@@ -137,6 +137,8 @@ pf.apply_layers(
 
 ## Advanced Example 1: Custom landmark region
 
+Though PyFAME comes prepackaged with a variety of defined landmark paths, users may want to define their own custom paths. That is where the tastefully named `create_landmark_path()` comes in handy.
+
 ```python
 import cv2
 import pyfame as pf
@@ -187,3 +189,52 @@ pf.apply_layer(
 
 ```
 
+---
+
+## Advanced Example 2: Landmark relocation with custom LandmarkRelocateSpec
+
+```python
+import pyfame as pf
+
+# load in file paths
+file_paths = pf.load_sample_data()
+
+# The layer_spatial_landmark_relocate() takes in a parameter
+# landmark_relocate_specs, which is a dict of (int, FaceAnchor) pairs
+
+# Keys range [0-3] corresponding to 0-left eye, 1-right eye,
+# 2-nose, and 3-mouth. Each index is paired with a LandmarkRelocateSpec
+lm_reloc_specs = {
+    # Each spec must define a FaceAnchor, and optionally may define 
+    # a rotation and displacement
+    0 : pf.LandmarkRelocateSpec(                
+        anchor = pf.FaceAnchor.SUBJECT_LOWER_CENTER,  
+        rotation_deg = 35.0                    
+    ),
+    1 : pf.LandmarkRelocateSpec(
+        anchor = pf.FaceAnchor.SUBJECT_UPPER_LEFT,
+        rotation_deg = -45.0,
+        offsets = (15, 9)
+    ),
+    2 : pf.LandmarkRelocateSpec(
+        anchor = pf.FaceAnchor.SUBJECT_UPPER_RIGHT
+    ),
+    3 : pf.LandmarkRelocateSpec(
+        anchor = pf.FaceAnchor.SUBJECT_CENTER
+        rotation_deg = 90.0
+    )
+}
+
+# Define the layer with above relocation specs
+lm_relocate = pf.layer_spatial_landmark_relocate(
+    landmark_relocate_specs = lm_reloc_specs,
+    out_greyscale = True
+)
+
+# Apply the layer to our files
+pf.apply_layer(
+    file_paths = file_paths,
+    layers = lm_relocate
+)
+
+```

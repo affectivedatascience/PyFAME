@@ -112,19 +112,24 @@
 /* Navigation tabs row */
 .md-tabs {
     height: 2rem;
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.md-tabs__inner {
+    height: 100%;
 }
 
 .md-tabs__list {
-    height: 2rem;
+    height: 100%;
 }
 
 .md-tabs__item {
-    height: 2rem;
+    height: 100%;
     padding-top: 0;
 }
 
 .md-tabs__link {
-    height: 2rem;
+    height: 100%;
     margin-top: 0;
 
     display: flex;
@@ -141,10 +146,6 @@
 [data-md-color-scheme="default"] .md-tabs {
     background-color: var(--md-default-bg-color);
     color: var(--md-default-fg-color);
-}
-
-.md-tabs {
-    border-bottom: 1px solid var(--md-default-fg-color--lightest);
 }
 
 /* ==========================================================================
