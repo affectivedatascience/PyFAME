@@ -10,12 +10,29 @@ pip install pyfame
 
 ## Quick Start
 
-PyFAME provides a complete image and video manipulation pipeline, acheivable with only a few lines of code:
+Prior to manipulating or analysing any images or videos with PyFAME, users need to ensure they have the expected directory structure set up. Lucky for you, the `make_paths()` function handles setting up all of the necessary file structure. By default it will create a top level `data/` folder in your current working directory, but you may also pass a custom folder name if that is preferred. There are two ways to call `make_paths()`, both of which only need to be run once after you first install PyFAME:
+
+### Within a python file
+
+```python
+import pyfame as pf
+
+pf.make_paths()
+```
+
+### Within the terminal (CMD, PowerShell, etc.)
+
+```sh
+python -c "from pyfame import make_paths; make_paths()"
+```
+
+Now, you can create a complete image and video manipulation pipeline with only a few lines of code:
+
 ```python
 import pyfame as pf
 
 # Get dataframe of file paths, pre-loaded with sample data
-files = pf.make_paths(load_sample_data = True)
+files = pf.load_sample_data()
 
 # Create your manipulation layer
 layer_recolour = pf.layer_colour_recolour()

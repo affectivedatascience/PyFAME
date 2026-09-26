@@ -1,11 +1,11 @@
+# Ignore all auto generated runtime caches
 __pycache__/
 .pytest_cache/
-.tox/
-.vscode/
-data/
-node_modules/
-docs_depricated/.vitepress/cache
-scripts/
-tests/__pycache__/
-venv311/
-build.ps1
+
+# Ignore all local environment files
+/.tox/
+/.vscode/
+/data/
+/scripts/
+/venv311/
+/build.ps1

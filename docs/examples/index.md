@@ -2,26 +2,6 @@
  
 Step-by-step walkthroughs of some of PyFAME's more complex use cases.
 
-## Preliminary Example: Setting up file structure
-
-Prior to manipulating or analysing any images or videos with PyFAME, users need to ensure they have the expected directory structure set up. Lucky for you, the `make_paths()` function handles setting up all of the necessary file structure. By default it will create a top level `data/` folder in your current working directory, but you may also pass a custom folder name if that is preferred. There are two ways to call `make_paths()`, both of which only need to be run once after you first install PyFAME:
-
-### Within a python file
-
-```python
-import pyfame as pf
-
-pf.make_paths()
-```
-
-### Within the terminal (CMD, PowerShell, etc.)
-
-```sh
-python -c "from pyfame import make_paths; make_paths()"
-```
-
----
-
 ## Example 1: Simple timing configuration
 
 The following example highlights how to define a `TimingConfiguration` object, and how to use it alongside manipulation `Layers`. `TimingConfiguration` serves as the base of all temporal controls in PyFAME, and it allows the user to define when a manipulation onsets and offsets, its rise and fall curves, as well as its rise and fall durations.
